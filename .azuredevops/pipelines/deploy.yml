@@ -1,0 +1,22 @@
+trigger: none
+
+parameters:
+  - name: environment
+    displayName: 'Target Environment'
+    type: string
+    default: dev
+    values: [ dev, staging, prod ]
+
+pool:
+  vmImage: ubuntu-latest
+
+steps:
+  - task: TerraformInstaller@1
+    inputs:
+      terraformVersion: 'latest'
+
+  - script: terraform -chdir=terraform/environments/${{ parameters.environment }} init
+    displayName: 'Terraform Init'
+
+  - script: terraform -chdir=terraform/environments/${{ parameters.environment }} apply -auto-approve
+    displayName: 'Terraform Apply'

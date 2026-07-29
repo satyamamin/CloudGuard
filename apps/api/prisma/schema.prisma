@@ -1,0 +1,23 @@
+// Single-tenant schema: this database is provisioned fresh, per customer,
+// inside the customer's own Azure tenant (see docs/connect-azure.md). There
+// is no multi-tenancy scoping column — isolation is physical, not row-level.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Instance {
+  id                      String    @id @default(cuid())
+  selectedSubscriptionIds String[]  @default([])
+  lastSyncedAt            DateTime?
+  lastSyncError           String?
+  createdAt               DateTime  @default(now())
+  updatedAt               DateTime  @updatedAt
+
+  @@map("instance")
+}

@@ -1,0 +1,36 @@
+# Node / TypeScript monorepo (apps/, packages/)
+node_modules/
+dist/
+.next/
+*.tsbuildinfo
+.env.local
+.env*.local
+
+# Terraform
+**/.terraform/
+*.tfstate
+*.tfstate.backup
+*.tfvars.backup
+.terraform.lock.hcl
+crash.log
+override.tf
+override.tf.json
+
+# Secrets
+.env
+*.env
+secrets.*
+**/terraform.tfvars
+docs/Internal integration secret.txt
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+
+# Logs
+*.log
+
+# OS
+Thumbs.db
+.DS_Store

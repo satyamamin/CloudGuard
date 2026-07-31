@@ -4,11 +4,12 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this repository actually is
 
-This repo contains **three unrelated layers**, not a single application:
+This repo contains **two unrelated layers**, not a single application:
 
 1. **The real CloudGuard 360 product** — an npm-workspaces monorepo (`apps/`, `packages/`, `infra/bicep`) implementing the v1 "Connect Azure" onboarding flow. This is where active development happens.
 2. **Planning/prototype artifacts** for the product — `docs/`, `jsx/` (a slide-deck viewer for architecture docs), `cloudguard-notion-setup/` (a Notion workspace provisioning script). Not part of the shipped product.
-3. **A generic, unfilled infra template** left over from the starter repo this was cloned from (root-level `terraform/`, `scripts/`, `Makefile`, `.azuredevops/pipelines/`, `.github/workflows/{ci,deploy}.yml`). Every file here is still a placeholder (empty Terraform resource blocks, no-op deploy scripts) and is unrelated to the monorepo — don't assume the two share config or CI.
+
+(The repo used to also carry a generic, unfilled Terraform/Makefile/.azuredevops template left over from the starter repo it was cloned from — removed as dead weight; it never shared config or CI with the monorepo above. `.github/workflows/build-api-image.yml` is real, active CI though — it builds/pushes `apps/api`'s Docker image to GHCR, which `infra/bicep/main.bicep` deploys by default.)
 
 ## Architecture (v1 — customer-hosted, no CloudGuard backend)
 
@@ -40,7 +41,6 @@ infra/bicep/    The "Deploy to Azure" template
 
 - `jsx/` — standalone Vite+React app rendering the architecture/roadmap docs as interactive slides. Entry point `jsx/src/main.jsx` is a page registry; add a page by appending a lazy-loaded entry and dropping a new top-level `.jsx` file. Not connected to `apps/web`.
 - `cloudguard-notion-setup/setup.js` — one-off script (`npm run setup`) that provisions a Notion workspace via `@notionhq/client`. Requires `NOTION_TOKEN` + `NOTION_PARENT_PAGE_ID`; running it mutates a real external Notion page, so don't run it without explicit intent. `workspace/*.js` files are unused stubs.
-- `terraform/`, `scripts/bash/`, `scripts/powershell/`, `.azuredevops/pipelines/` — generic template placeholders (a single `azurerm_resource_group` is the entire Terraform module). Unrelated to `infra/bicep`.
 
 ## Commands
 
@@ -83,14 +83,13 @@ az deployment group validate --resource-group <test-rg> --template-file infra/bi
 
 No test runner is configured anywhere in the repo yet (`cloudguard-notion-setup`'s `test` script is the default `npm init` placeholder that just exits 1).
 
-The root-level Terraform template is unrelated to the monorepo above:
+## Clerk setup gotcha (apps/web)
 
+Clerk Organizations must be enabled with **"Membership required"** (every signed-in user needs an active org — `middleware.ts` and every `app/api/instance/*` route read `auth().orgId`). This is *not* enough on its own: a fresh Clerk application's session token does not include `org_id`/`org_role`/`org_slug` claims by default. If `auth().orgId` is `undefined` even for a user with a real, confirmed organization membership (verified via the Clerk backend API showing `last_active_organization_id` set on the session), the fix is in the Clerk Dashboard, not the code: **Configure → Sessions → Customize session token**, add:
+```json
+{ "org_id": "{{org.id}}", "org_slug": "{{org.slug}}", "org_role": "{{org.role}}" }
 ```
-make init ENV=dev      # terraform -chdir=terraform/environments/dev init
-make plan ENV=dev
-make apply ENV=dev
-make healthcheck       # scripts/bash/healthcheck.sh — checks az CLI + terraform are installed/logged in
-```
+Existing sessions pick this up automatically (tokens refresh every ~60s); no user-facing repro like signing out/in is actually required once the claim is added. `apps/web/app/layout.tsx` already renders `OrganizationSwitcher` + `UserButton` for local org creation/selection during dev.
 
 ## Security note
 

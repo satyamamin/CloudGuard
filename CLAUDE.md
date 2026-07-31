@@ -7,7 +7,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 This repo contains **two unrelated layers**, not a single application:
 
 1. **The real CloudGuard 360 product** — an npm-workspaces monorepo (`apps/`, `packages/`, `infra/bicep`) implementing the v1 "Connect Azure" onboarding flow. This is where active development happens.
-2. **Planning/prototype artifacts** for the product — `docs/`, `jsx/` (a slide-deck viewer for architecture docs), `cloudguard-notion-setup/` (a Notion workspace provisioning script). Not part of the shipped product.
+2. **Planning artifacts** for the product — `docs/connect-azure.md` (current, authoritative) and `docs/initial-vision-archive.md` (a consolidated, explicitly-historical snapshot of the founder's original pre-build vision — superseded, kept for reference only). Not part of the shipped product.
 
 (The repo used to also carry a generic, unfilled Terraform/Makefile/.azuredevops template left over from the starter repo it was cloned from — removed as dead weight; it never shared config or CI with the monorepo above. `.github/workflows/build-api-image.yml` is real, active CI though — it builds/pushes `apps/api`'s Docker image to GHCR, which `infra/bicep/main.bicep` deploys by default.)
 
@@ -34,11 +34,6 @@ infra/bicep/    The "Deploy to Azure" template
 **`infra/bicep`** is deployed at resource-group scope (all the Azure Portal's "Deploy a custom template" flow allows), but the Reader + Cost Management Reader role assignments must be subscription-scoped — `modules/role-assignments.bicep` declares `targetScope = 'subscription'` and is invoked from `main.bicep` with an explicit `scope: subscription()`, a real Bicep feature (a module's scope can differ from its parent deployment's). Prisma migrations run from `apps/api/docker-entrypoint.sh` at container boot (`prisma migrate deploy`), not from CI — there is no pipeline that reaches into a customer's tenant.
 
 **`apps/web`**'s `/connect-azure` page composes: a deploy-link button (built from `NEXT_PUBLIC_BICEP_TEMPLATE_URI`) → `PairingForm` (posts to `app/api/instance/route.ts`, which calls the paired backend's `/health` before persisting) → `OnboardingStepper` (discover/select/sync against `app/api/instance/subscriptions/route.ts` and `.../sync/route.ts`). All three of those route handlers are the *only* code allowed to read/write the pairing (`lib/clerk-org-metadata.ts`, marked `server-only`) or call the customer's backend (`lib/backend-client.ts`, also `server-only`) — client components only ever see a redacted `apiKeyLast4`.
-
-### Other directories (leave alone unless asked)
-
-- `jsx/` — standalone Vite+React app rendering the architecture/roadmap docs as interactive slides. Entry point `jsx/src/main.jsx` is a page registry; add a page by appending a lazy-loaded entry and dropping a new top-level `.jsx` file. Not connected to `apps/web`.
-- `cloudguard-notion-setup/setup.js` — one-off script (`npm run setup`) that provisions a Notion workspace via `@notionhq/client`. Requires `NOTION_TOKEN` + `NOTION_PARENT_PAGE_ID`; running it mutates a real external Notion page, so don't run it without explicit intent. `workspace/*.js` files are unused stubs.
 
 ## Commands
 
@@ -79,7 +74,7 @@ az bicep build --file infra/bicep/main.bicep --outfile infra/bicep/main.json   #
 az deployment group validate --resource-group <test-rg> --template-file infra/bicep/main.json
 ```
 
-No test runner is configured anywhere in the repo yet (`cloudguard-notion-setup`'s `test` script is the default `npm init` placeholder that just exits 1).
+No test runner is configured anywhere in the repo yet.
 
 ## Clerk setup gotcha (apps/web)
 

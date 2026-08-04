@@ -25,7 +25,7 @@ export default async function ConnectAzurePage() {
             <Card>
               <CardTitle>1. Deploy to your tenant</CardTitle>
               <CardDescription>
-                Opens the Azure Portal. You'll pick a subscription, region (EU only), and resource group name.
+                Opens the Azure Portal. You&apos;ll pick a subscription, region (EU only), and resource group name.
               </CardDescription>
               <div className="mt-4">
                 <DeployButton />

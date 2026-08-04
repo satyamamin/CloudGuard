@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>CloudGuard API Viewer (local dev only)</title>
+<style>
+  body { font-family: system-ui, sans-serif; max-width: 800px; margin: 2rem auto; padding: 0 1rem; }
+  h1 { font-size: 1.2rem; }
+  label { display: block; margin-top: 0.75rem; font-size: 0.85rem; color: #444; }
+  input, select { width: 100%; padding: 0.4rem; box-sizing: border-box; }
+  button { margin-top: 1rem; padding: 0.5rem 1rem; cursor: pointer; }
+  table { border-collapse: collapse; margin-top: 1rem; width: 100%; }
+  th, td { border: 1px solid #ddd; padding: 0.4rem 0.6rem; text-align: left; font-size: 0.9rem; }
+  th { background: #f5f5f5; }
+  pre { background: #f5f5f5; padding: 1rem; overflow-x: auto; font-size: 0.8rem; }
+  .error { color: #b00020; margin-top: 1rem; }
+  .total { margin-top: 0.5rem; font-weight: bold; }
+  .dateRange { font-weight: normal; color: #888; }
+  .cacheBadge { font-weight: normal; color: #0a7d2c; background: #e6f6ea; padding: 0.1rem 0.4rem; border-radius: 3px; font-size: 0.8rem; }
+</style>
+</head>
+<body>
+  <h1>CloudGuard API Viewer <small>(local dev only — not part of the product)</small></h1>
+
+  <label>Backend URL</label>
+  <input id="backendUrl" value="http://localhost:3001">
+
+  <label>API key</label>
+  <input id="apiKey" value="dev-local-api-key">
+
+  <label>View</label>
+  <select id="view">
+    <option value="daily">Daily costs</option>
+    <option value="accumulated">Accumulated costs</option>
+    <option value="byService">Cost by service</option>
+    <option value="byResource">Cost by resource</option>
+  </select>
+
+  <label>Subscription (default = backend's selected subscription)</label>
+  <select id="subscriptionId">
+    <option value="">Loading subscriptions...</option>
+  </select>
+
+  <label>Days</label>
+  <input id="days" type="number" value="30" min="1">
+
+  <button id="fetchBtn">Fetch</button>
+
+  <div id="error" class="error"></div>
+  <div id="total" class="total"></div>
+  <table id="resultTable" style="display:none">
+    <thead id="resultHead"></thead>
+    <tbody id="resultBody"></tbody>
+  </table>
+  <pre id="rawJson"></pre>
+
+<script>
+const FIELDS = ["backendUrl", "apiKey", "days"];
+for (const id of FIELDS) {
+  const el = document.getElementById(id);
+  const saved = localStorage.getItem("cg_viewer_" + id);
+  if (saved) el.value = saved;
+  el.addEventListener("change", () => localStorage.setItem("cg_viewer_" + id, el.value));
+}
+
+async function loadSubscriptions() {
+  const backendUrl = document.getElementById("backendUrl").value.replace(/\/$/, "");
+  const apiKey = document.getElementById("apiKey").value;
+  const selectEl = document.getElementById("subscriptionId");
+  const savedSelection = localStorage.getItem("cg_viewer_subscriptionId");
+  const authHeaders = { Authorization: `Bearer ${apiKey}` };
+
+  selectEl.innerHTML = '<option value="">Loading subscriptions...</option>';
+
+  try {
+    const [subsRes, statusRes] = await Promise.all([
+      fetch(`${backendUrl}/subscriptions`, { headers: authHeaders }),
+      fetch(`${backendUrl}/status`, { headers: authHeaders }),
+    ]);
+    const subs = await subsRes.json();
+    if (!subsRes.ok) throw new Error(JSON.stringify(subs));
+
+    const status = statusRes.ok ? await statusRes.json() : null;
+    const backendSelectedId = status?.selectedSubscriptionIds?.[0] || "";
+
+    selectEl.innerHTML = "";
+    for (const sub of subs) {
+      const opt = document.createElement("option");
+      opt.value = sub.azureSubscriptionId;
+      opt.textContent = sub.displayName;
+      if (sub.azureSubscriptionId === backendSelectedId) {
+        opt.textContent += " (backend's selected subscription)";
+      }
+      selectEl.appendChild(opt);
+    }
+
+    // Prefer a previously chosen selection; otherwise default to whatever the
+    // backend currently has selected (matches /status's selectedSubscriptionIds).
+    selectEl.value = savedSelection ?? backendSelectedId;
+  } catch (err) {
+    selectEl.innerHTML = `<option value="">Could not load subscriptions</option>`;
+  }
+}
+
+document.getElementById("subscriptionId").addEventListener("change", (e) => {
+  localStorage.setItem("cg_viewer_subscriptionId", e.target.value);
+});
+document.getElementById("backendUrl").addEventListener("change", loadSubscriptions);
+document.getElementById("apiKey").addEventListener("change", loadSubscriptions);
+loadSubscriptions();
+
+// Each view knows its own endpoint and how to turn a response body into
+// table rows + a rounded (for display) copy of the raw JSON.
+const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+function formatDateLabel(iso) {
+  const [, month, day] = iso.split("-").map(Number);
+  return `${MONTHS[month - 1]} ${day}`;
+}
+function formatDateRange(fromIso, toIso) {
+  return `${formatDateLabel(fromIso)}-${formatDateLabel(toIso)}`;
+}
+
+const VIEWS = {
+  daily: {
+    endpoint: "/costs/daily",
+    columns: ["Date", "Cost"],
+    items: (body) => body.days,
+    row: (d, currency) => [d.date, `${d.cost.toFixed(2)} ${currency}`],
+    round: (body) => ({ ...body, days: body.days.map((d) => ({ ...d, cost: Number(d.cost.toFixed(2)) })) }),
+    total: (body) => body.days.reduce((sum, d) => sum + d.cost, 0),
+    totalLabel: (body, total) => `Total: ${total.toFixed(2)} ${body.currency} over ${body.days.length} day(s)`,
+  },
+  accumulated: {
+    endpoint: "/costs/accumulated",
+    columns: ["Date", "Cumulative cost"],
+    items: (body) => body.days,
+    row: (d, currency) => [d.date, `${d.cumulativeCost.toFixed(2)} ${currency}`],
+    round: (body) => ({
+      ...body,
+      days: body.days.map((d) => ({ ...d, cumulativeCost: Number(d.cumulativeCost.toFixed(2)) })),
+    }),
+    // Each row is already a running total, so the period total is just the
+    // last row's cumulative value — not a sum of all rows.
+    total: (body) => body.days[body.days.length - 1]?.cumulativeCost ?? 0,
+    totalLabel: (body, total) => `Total: ${total.toFixed(2)} ${body.currency} over ${body.days.length} day(s)`,
+  },
+  byService: {
+    endpoint: "/costs/by-service",
+    columns: ["Service", "Cost"],
+    items: (body) => body.services,
+    row: (s, currency) => [s.serviceName, `${s.cost.toFixed(2)} ${currency}`],
+    round: (body) => ({ ...body, services: body.services.map((s) => ({ ...s, cost: Number(s.cost.toFixed(2)) })) }),
+    total: (body) => body.services.reduce((sum, s) => sum + s.cost, 0),
+    totalLabel: (body, total) => `Total: ${total.toFixed(2)} ${body.currency} across ${body.services.length} service(s)`,
+  },
+  byResource: {
+    endpoint: "/costs/by-resource",
+    columns: ["Resource", "Cost"],
+    items: (body) => body.resources,
+    row: (r, currency) => [r.resourceName, `${r.cost.toFixed(2)} ${currency}`],
+    round: (body) => ({ ...body, resources: body.resources.map((r) => ({ ...r, cost: Number(r.cost.toFixed(2)) })) }),
+    total: (body) => body.resources.reduce((sum, r) => sum + r.cost, 0),
+    totalLabel: (body, total) => `Total: ${total.toFixed(2)} ${body.currency} across ${body.resources.length} resource(s)`,
+  },
+};
+
+document.getElementById("fetchBtn").addEventListener("click", async () => {
+  const backendUrl = document.getElementById("backendUrl").value.replace(/\/$/, "");
+  const apiKey = document.getElementById("apiKey").value;
+  const subscriptionId = document.getElementById("subscriptionId").value.trim();
+  const days = document.getElementById("days").value;
+  const view = VIEWS[document.getElementById("view").value];
+
+  const errorEl = document.getElementById("error");
+  const totalEl = document.getElementById("total");
+  const tableEl = document.getElementById("resultTable");
+  const headEl = document.getElementById("resultHead");
+  const bodyEl = document.getElementById("resultBody");
+  const rawEl = document.getElementById("rawJson");
+
+  errorEl.textContent = "";
+  totalEl.textContent = "";
+  tableEl.style.display = "none";
+  bodyEl.innerHTML = "";
+  rawEl.textContent = "Loading...";
+
+  const params = new URLSearchParams({ days });
+  if (subscriptionId) params.set("subscriptionId", subscriptionId);
+
+  try {
+    const res = await fetch(`${backendUrl}${view.endpoint}?${params}`, {
+      headers: { Authorization: `Bearer ${apiKey}` },
+    });
+    const body = await res.json();
+
+    if (!res.ok) {
+      errorEl.textContent = `HTTP ${res.status}: ${JSON.stringify(body)}`;
+      rawEl.textContent = "";
+      return;
+    }
+
+    rawEl.textContent = JSON.stringify(view.round(body), null, 2);
+
+    const items = view.items(body);
+    const total = view.total(body);
+    const range = formatDateRange(body.from, body.to);
+    const cacheStatus = res.headers.get("X-Cache");
+    const cacheBadge = cacheStatus === "HIT" ? ` <span class="cacheBadge">(cached)</span>` : "";
+    totalEl.innerHTML = `${view.totalLabel(body, total)} <span class="dateRange">(${range})</span>${cacheBadge}`;
+
+    headEl.innerHTML = `<tr>${view.columns.map((c) => `<th>${c}</th>`).join("")}</tr>`;
+    for (const item of items) {
+      const tr = document.createElement("tr");
+      tr.innerHTML = view.row(item, body.currency).map((cell) => `<td>${cell}</td>`).join("");
+      bodyEl.appendChild(tr);
+    }
+    tableEl.style.display = "";
+  } catch (err) {
+    errorEl.textContent = String(err);
+    rawEl.textContent = "";
+  }
+});
+</script>
+</body>
+</html>

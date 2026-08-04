@@ -6,8 +6,14 @@ import { AppModule } from "./app.module";
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
+  // Comma-separated in local dev to also allow the standalone API viewer
+  // page (local-dev-test/viewer); production only ever sets one origin.
+  const allowedOrigins = (process.env.FRONTEND_ORIGIN ?? "").split(",").map((origin) => origin.trim());
   app.enableCors({
-    origin: process.env.FRONTEND_ORIGIN,
+    origin: allowedOrigins,
+    // Browsers hide all but a few "simple" response headers from JS by
+    // default — exposeHeaders is required for the viewer's cache indicator.
+    exposedHeaders: ["X-Cache"],
   });
 
   app.useGlobalPipes(

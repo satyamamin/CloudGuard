@@ -89,7 +89,7 @@ One-time setup (`npm install`, `.env` files, Prisma migrate) only needs to happe
    ```
    Should return `{"status":"ok",...}`. If `/health` works but `/subscriptions` or `/sync` later fail with a 500, it's almost always the Azure CLI token again (step 1).
 
-6. Open the browser to `http://localhost:3000/connect-azure`.
+6. Open the browser to `http://localhost:3000/connect-azure` and complete pairing + subscription select + sync. Once synced, cost data is viewable at `http://localhost:3000/dashboard`.
 
 Steps 1–6 above are automated by a single script:
 ```powershell

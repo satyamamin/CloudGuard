@@ -1,6 +1,6 @@
 import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
 
-const isProtectedRoute = createRouteMatcher(["/connect-azure(.*)", "/api/instance(.*)"]);
+const isProtectedRoute = createRouteMatcher(["/connect-azure(.*)", "/api/instance(.*)", "/dashboard(.*)"]);
 
 export default clerkMiddleware((auth, req) => {
   if (isProtectedRoute(req)) {

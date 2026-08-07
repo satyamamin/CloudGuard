@@ -62,7 +62,7 @@ if ($LASTEXITCODE -ne 0) {
     }
     Write-Host "Docker Desktop is ready."
 }
-docker compose -f (Join-Path $repoRoot "docker-compose.dev.yml") up -d
+docker compose -f (Join-Path $repoRoot "docker-compose.dev.yml") up -d postgres
 
 # Step 3 — apps/api
 Write-Host "`n== Step 3: apps/api ==" -ForegroundColor Cyan
@@ -81,7 +81,17 @@ try {
 if ($apiAlreadyUp) {
     Write-Host "apps/api already running on port $apiPort — skipping."
 } else {
-    Start-Process powershell -ArgumentList "-NoExit", "-Command", "cd '$repoRoot'; npm run dev:api"
+    # apps/api has no dotenv loading of its own (see apps/api/src/main.ts) —
+    # `nest start` does not read .env files automatically. Without this, the
+    # spawned process crashes at boot with "Environment variable not found:
+    # DATABASE_URL" (PrismaService.onModuleInit), even though $apiEnv above
+    # already parsed the exact values needed — they were only ever used for
+    # this script's own health-check polling, never forwarded to the child.
+    $envSetters = ($apiEnv.GetEnumerator() | ForEach-Object {
+        $value = $_.Value -replace "'", "''"
+        "`$env:$($_.Key) = '$value'"
+    }) -join "; "
+    Start-Process powershell -ArgumentList "-NoExit", "-Command", "cd '$repoRoot'; $envSetters; npm run dev:api"
     Write-Host "Waiting for apps/api to become healthy..."
     if (-not (Wait-ForHttp $apiHealthUrl $apiHeaders "apps/api")) { exit 1 }
     $health = Invoke-RestMethod -Uri $apiHealthUrl -Headers $apiHeaders -TimeoutSec 3

@@ -11,5 +11,25 @@ services:
     volumes:
       - cloudguard-postgres-data:/var/lib/postgresql/data
 
+  # Local stand-in for Neon (apps/api-saas / SaaS tier). Separate port and
+  # volume from the BYOC postgres service above — the SaaS tier's DB is
+  # genuinely multi-tenant/shared, unlike BYOC's per-customer instance, so
+  # it's kept on its own container even in local dev.
+  postgres-saas:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: cloudguard
+      POSTGRES_PASSWORD: cloudguard
+      POSTGRES_DB: cloudguard_saas
+    ports:
+      - "5433:5432"
+    volumes:
+      - cloudguard-postgres-saas-data:/var/lib/postgresql/data
+      # Runs once, only on a fresh volume — creates the non-superuser
+      # role RLS enforcement depends on. See apps/api-saas/local-dev-init.sql.
+      - ./apps/api-saas/local-dev-init.sql:/docker-entrypoint-initdb.d/local-dev-init.sql:ro
+
 volumes:
   cloudguard-postgres-data:
+  cloudguard-postgres-saas-data:

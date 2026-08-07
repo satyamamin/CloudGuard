@@ -4,13 +4,16 @@
 > Status: **deferred — not in v1 scope.** Architecture decisions below are
 > locked for whenever this tier is picked back up, but initial shipping
 > (2026-08-06 decision) is BYOC-only, using the already-built
-> `docs/connect-azure.md` flow exclusively. `apps/api-saas` is frozen as-is
-> (health endpoint running, RLS shipped and verified on `azure_connection`,
-> connection/cost endpoints not started) — paused, not abandoned. Revisit
-> after initial customer traction.
+> `docs/connect-azure.md` flow exclusively. `apps/api-saas` (health endpoint
+> running, RLS shipped and verified on `azure_connection`, connection/cost
+> endpoints not started) was removed from the working tree — not
+> abandoned, just not carried forward as dead code while v1 focuses on
+> BYOC. The code is preserved in git history at commit `335dde2` and this
+> doc remains the source of truth for resuming it. Revisit after initial
+> customer traction.
 > Companion docs: `docs/connect-azure.md` (BYOC/self-hosted tier — the tier
 > that actually ships first; unaffected by this doc),
-> `docs/architecture.md` (canonical per-layer infra choice + build status
+> `docs/plan/architecture.md` (canonical per-layer infra choice + build status
 > across both tiers)
 
 ---
@@ -127,7 +130,7 @@ scale), Postgres Burstable B1ms (~$12–20/mo), Redis Basic C0 (~$15/mo,
 dev-grade/no SLA — upgrade to Standard before depending on uptime), plus
 small Key Vault/registry costs.
 
-See `docs/architecture.md` for the canonical, cross-tier table of what's
+See `docs/plan/architecture.md` for the canonical, cross-tier table of what's
 actually shipped vs. decided-but-not-built per layer — this section is the
 rationale, that doc is the live status.
 
@@ -372,7 +375,7 @@ No secret/credential column — see "Cross-tenant access mechanism" above.
   `neon_superuser`/`BYPASSRLS` — see "What multi-tenant means here" for why
   Neon's default role doesn't work for this.
 - **Cache (Upstash) and Jobs (Trigger.dev) are decided but not built** —
-  see `docs/architecture.md` for current status. No caching or scheduled
+  see `docs/plan/architecture.md` for current status. No caching or scheduled
   sync exists in `apps/api-saas` yet.
 - **Secrets manager for SaaS** is not yet named — "any secrets manager" is
   a placeholder; the App Registration certificate currently lives as a

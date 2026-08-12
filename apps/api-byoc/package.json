@@ -1,5 +1,5 @@
 {
-  "name": "@cloudguard/api-byoc",
+  "name": "@finops-lab/api-byoc",
   "version": "0.0.0",
   "private": true,
   "scripts": {
@@ -14,7 +14,7 @@
     "@azure/arm-costmanagement": "^1.0.0",
     "@azure/arm-subscriptions": "^5.1.0",
     "@azure/identity": "^4.4.1",
-    "@cloudguard/shared": "*",
+    "@finops-lab/shared": "*",
     "@nestjs/common": "^10.4.4",
     "@nestjs/core": "^10.4.4",
     "@nestjs/platform-express": "^10.4.4",

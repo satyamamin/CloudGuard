@@ -1,6 +1,6 @@
 import "server-only";
 import { clerkClient } from "@clerk/nextjs/server";
-import { InstancePairing, MaskedInstancePairing, instancePairingSchema, maskApiKey } from "@cloudguard/shared";
+import { InstancePairing, MaskedInstancePairing, instancePairingSchema, maskApiKey } from "@finops-lab/shared";
 
 // The API key must live in Clerk PRIVATE organization metadata, never public
 // metadata — public metadata is readable client-side by any org member via

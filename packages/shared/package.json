@@ -1,5 +1,5 @@
 {
-  "name": "@cloudguard/shared",
+  "name": "@finops-lab/shared",
   "version": "0.0.0",
   "private": true,
   "main": "dist/index.js",

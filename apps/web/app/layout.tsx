@@ -1,9 +1,10 @@
 import { ClerkProvider, OrganizationSwitcher, SignedIn, UserButton } from "@clerk/nextjs";
 import type { Metadata } from "next";
+import { PRODUCT_NAME } from "@/lib/product-name";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "CloudGuard 360",
+  title: PRODUCT_NAME,
   description: "Azure cost management for the EU market",
 };
 

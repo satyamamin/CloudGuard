@@ -17,7 +17,7 @@ import {
   instanceStatusSchema,
   listSubscriptionsResponseSchema,
   syncResultSchema,
-} from "@cloudguard/shared";
+} from "@finops-lab/shared";
 
 export interface CostsQuery {
   subscriptionId?: string;

@@ -1,4 +1,4 @@
-# CloudGuard Hosted (SaaS Tier) — Architecture & Onboarding Flow (v1)
+# FinOps Lab Hosted (SaaS Tier) — Architecture & Onboarding Flow (v1)
 
 > Module: Core API — "Connect & Discover" (SaaS tier)
 > Status: **deferred — not in v1 scope.** Architecture decisions below are
@@ -39,7 +39,7 @@ first.
 
 ## Why a second tier, and why this reopens a decision `connect-azure.md` made
 
-`docs/byoc/connect-azure.md`'s "Architecture pivot" section records CloudGuard
+`docs/byoc/connect-azure.md`'s "Architecture pivot" section records FinOps Lab
 deliberately abandoning a shared multi-tenant backend + per-customer Service
 Principal ("v0") in favor of a customer-hosted, single-tenant backend ("v1")
 — specifically for the GDPR/EU-data-residency pitch: *"customer data never
@@ -143,7 +143,7 @@ customer's Azure tenant without deploying anything into it?
 
 **Option A — Azure Lighthouse delegation**
 Customer runs a small ARM template delegating Reader + Cost Management
-Reader to a CloudGuard-owned identity. No secret is ever stored or
+Reader to a FinOps Lab-owned identity. No secret is ever stored or
 transmitted.
 - \+ No stored credential — eliminates leak/rotation risk entirely.
 - \+ Strongest story for security-conscious/enterprise buyers; consistent
@@ -156,13 +156,13 @@ transmitted.
 - – Weaker "2-minute self-serve signup" experience.
 
 **Option B — Multi-tenant App Registration + stored client secret**
-Customer does one-click OAuth admin-consent against a CloudGuard-owned
-multi-tenant AAD app; CloudGuard authenticates with one shared credential
+Customer does one-click OAuth admin-consent against a FinOps Lab-owned
+multi-tenant AAD app; FinOps Lab authenticates with one shared credential
 across every tenant (see "Architecture" below — this is not a secret stored
 per customer).
 - \+ Fast to build — standard, extremely well-documented OAuth pattern.
 - \+ Smoothest onboarding UX (click, consent, done).
-- – CloudGuard now holds one live, rotatable credential whose compromise
+- – FinOps Lab now holds one live, rotatable credential whose compromise
   affects every tenant at once — the exact category of risk BYOC's
   Managed Identity model was chosen to avoid entirely.
 - – Real ongoing operational burden: rotation policy, secure storage.
@@ -176,11 +176,11 @@ mechanism.
 
 ### Architecture (locked)
 
-**One CloudGuard-owned credential, not one per customer.** A common
-misreading of the App-Registration pattern is that CloudGuard would store a
+**One FinOps Lab-owned credential, not one per customer.** A common
+misreading of the App-Registration pattern is that FinOps Lab would store a
 distinct credential per tenant, mirroring the original v0 design's "customer
 pastes Tenant ID / Client ID / Secret" form. That's not how a multi-tenant
-app registration works: CloudGuard registers **one** Azure AD app as
+app registration works: FinOps Lab registers **one** Azure AD app as
 multi-tenant ("accounts in any organizational directory"), in its own
 tenant, with **one** credential — a certificate, not a client secret
 (Microsoft's recommended credential for this pattern, and meaningfully
@@ -188,13 +188,13 @@ harder to exfiltrate / easier to rotate than a shared string). That one
 credential is stored once, as a Railway environment variable — never in
 Neon, never per-tenant, never alongside tenant data.
 
-Per customer, two things happen, neither of which hands CloudGuard a new
+Per customer, two things happen, neither of which hands FinOps Lab a new
 credential:
 
 1. **Admin consent** — the customer's Azure AD admin visits a standard
    consent URL
-   (`https://login.microsoftonline.com/{customer_tenant_id}/adminconsent?client_id={cloudguard_app_id}&redirect_uri=...`).
-   This provisions a service-principal object for CloudGuard's app *inside
+   (`https://login.microsoftonline.com/{customer_tenant_id}/adminconsent?client_id={finops_lab_app_id}&redirect_uri=...`).
+   This provisions a service-principal object for FinOps Lab's app *inside
    the customer's tenant* — an OAuth redirect and one click, no secret
    exchanged.
 2. **RBAC role assignment** — consent alone grants no ARM access. The
@@ -217,8 +217,8 @@ schema** — there is nothing customer-specific to encrypt at rest, rotate
 per-tenant, or leak per-tenant.
 
 **The honest tradeoff, stated plainly:** this is a materially different
-security posture than BYOC's Managed Identity model, where no CloudGuard-side
-secret exists at all. Here, one compromised CloudGuard-owned credential is a
+security posture than BYOC's Managed Identity model, where no FinOps Lab-side
+secret exists at all. Here, one compromised FinOps Lab-owned credential is a
 blast radius across *every* connected customer tenant at once — the inverse
 of BYOC's per-customer physical isolation, and the direct cost of choosing
 Option B as final. Mitigations, non-negotiable from day one:
@@ -255,7 +255,7 @@ role-assignment template deployment.
 
 `apps/api-saas` is genuinely multi-tenant — a `Tenant` row per Clerk
 organization, an `AzureConnection` row per delegated Azure tenant. Auth is a
-verified Clerk session JWT (the caller is always CloudGuard's own frontend,
+verified Clerk session JWT (the caller is always FinOps Lab's own frontend,
 acting on behalf of a logged-in org), not BYOC's single global API key —
 one shared key across all tenants would defeat per-tenant isolation
 entirely.
@@ -267,10 +267,10 @@ entirely.
 ```
 Click "Connect Azure" (on /connect-cloud, not /connect-azure)
   → Admin-consent redirect (login.microsoftonline.com/{tenant}/adminconsent)
-       → customer's AAD admin approves → CloudGuard's SP now exists in their tenant
+       → customer's AAD admin approves → FinOps Lab's SP now exists in their tenant
   → "Grant access" — small ARM/Bicep template deploy link
        → grants Reader + Cost Management Reader on the chosen subscription(s)
-         to CloudGuard's SP
+         to FinOps Lab's SP
   → Status poller confirms role assignment (ConnectionStatus → ACTIVE)
   → Discover  → GET  /connections/:id/subscriptions
   → Select    → POST /connections/:id/subscriptions/select
@@ -347,7 +347,7 @@ No secret/credential column — see "Cross-tenant access mechanism" above.
 
 ## Security rules (non-negotiable)
 
-- The CloudGuard-owned App Registration credential is a **certificate**,
+- The FinOps Lab-owned App Registration credential is a **certificate**,
   stored only as a Railway env var — never in Neon, never logged.
 - Every `apps/api-saas` query is scoped by `tenantId` resolved from the
   verified Clerk JWT — never from a client-supplied tenant/connection ID

@@ -1,5 +1,5 @@
 import { Injectable } from "@nestjs/common";
-import { AzureSubscription } from "@cloudguard/shared";
+import { AzureSubscription } from "@finops-lab/shared";
 import { InstanceService } from "../instance/instance.service";
 import { SubscriptionsClient } from "../azure/subscriptions.client";
 

@@ -13,7 +13,7 @@
 
 ## Why this doc exists
 
-CloudGuard 360 ships two tiers on genuinely different infrastructure: BYOC
+FinOps Lab ships two tiers on genuinely different infrastructure: BYOC
 deploys into the customer's own Azure tenant (Container Apps, Azure
 Postgres, Managed Identity); SaaS runs centrally on non-Azure infrastructure
 (Railway, Neon) and reaches into customer tenants remotely. Each tier's
@@ -69,7 +69,7 @@ Prisma abstracts the difference at the application layer, so this is a
 hosting choice, not an architecture one. BYOC's choice is fixed by "must
 live inside the customer's Azure tenant." Neon was chosen for SaaS as a
 managed, serverless-friendly Postgres that doesn't require running
-infrastructure CloudGuard has to patch.
+infrastructure FinOps Lab has to patch.
 
 **Cache — Upstash vs. Azure Cache for Redis.** Both tiers eventually need a
 real cache once their in-memory-cache assumptions stop holding: BYOC's

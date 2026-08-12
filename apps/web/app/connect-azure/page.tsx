@@ -1,5 +1,6 @@
 import { auth } from "@clerk/nextjs/server";
 import { getMaskedInstancePairing } from "@/lib/clerk-org-metadata";
+import { PRODUCT_NAME } from "@/lib/product-name";
 import { Card, CardDescription, CardTitle } from "@/components/ui/card";
 import { DeployButton } from "@/components/connect-azure/deploy-button";
 import { PairingForm } from "@/components/connect-azure/pairing-form";
@@ -16,7 +17,7 @@ export default async function ConnectAzurePage() {
     <main className="mx-auto max-w-2xl px-6 py-16">
       <h1 className="text-2xl font-bold text-slate-900">Connect Azure</h1>
       <p className="mt-2 text-sm text-slate-600">
-        CloudGuard deploys its backend directly into your own Azure tenant — your cost data never leaves it.
+        {PRODUCT_NAME} deploys its backend directly into your own Azure tenant — your cost data never leaves it.
       </p>
 
       <div className="mt-8 space-y-6">
@@ -33,7 +34,7 @@ export default async function ConnectAzurePage() {
             </Card>
 
             <Card>
-              <CardTitle>2. Pair with CloudGuard</CardTitle>
+              <CardTitle>2. Pair with {PRODUCT_NAME}</CardTitle>
               <CardDescription>Paste the Backend URL and API key shown at the end of the deployment.</CardDescription>
               <div className="mt-4">
                 <OnboardingWizard initiallyPaired={false} />

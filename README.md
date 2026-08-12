@@ -1,12 +1,12 @@
-# CloudGuard 360
+# FinOps Lab
 
-Azure cost management that deploys directly into a customer's own Azure tenant — CloudGuard hosts only the frontend; there is no CloudGuard-side backend or database.
+Azure cost management that deploys directly into a customer's own Azure tenant — FinOps Lab hosts only the frontend; there is no FinOps Lab-side backend or database.
 
 See [`docs/byoc/connect-azure.md`](docs/byoc/connect-azure.md) for the full architecture and endpoint contract, and [`CLAUDE.md`](CLAUDE.md) for detailed guidance on working in this repo.
 
 ## Architecture
 
-- A customer provisions a backend + Postgres **inside their own Azure tenant** via a "Deploy to Azure" button (ARM/Bicep). CloudGuard centrally hosts only the Next.js frontend.
+- A customer provisions a backend + Postgres **inside their own Azure tenant** via a "Deploy to Azure" button (ARM/Bicep). FinOps Lab centrally hosts only the Next.js frontend.
 - The deployed backend authenticates to Azure Cost Management via a **system-assigned Managed Identity** — no client secret is ever entered, stored, or transmitted.
 - Isolation between customers is **physical** (one Postgres instance per deployment), not row-level.
 - The frontend pairs with a customer's deployed instance via a `Backend URL` + `API key`, stored in **Clerk private organization metadata**.
@@ -15,7 +15,7 @@ See [`docs/byoc/connect-azure.md`](docs/byoc/connect-azure.md) for the full arch
 
 ```
 apps/api-byoc/         NestJS backend — the code deployed into the customer's tenant
-apps/web/         Next.js frontend — the only thing CloudGuard hosts centrally
+apps/web/         Next.js frontend — the only thing FinOps Lab hosts centrally
 packages/shared/  Zod schemas + types shared by both apps
 infra/bicep/       The "Deploy to Azure" template
 docs/             architecture.md + other shared docs at root; docs/byoc/connect-azure.md (source of truth); docs/saas/plan/ (deferred tier)

@@ -1,6 +1,6 @@
 import { Injectable } from "@nestjs/common";
 import { SubscriptionClient } from "@azure/arm-subscriptions";
-import { AzureSubscription } from "@cloudguard/shared";
+import { AzureSubscription } from "@finops-lab/shared";
 import { AzureCredentialProvider } from "./azure-credential.provider";
 
 // Not in the original Tech Stack SDK list (Cost Management / Resource Graph /

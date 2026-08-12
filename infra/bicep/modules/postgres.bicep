@@ -46,7 +46,7 @@ resource allowAzureServices 'Microsoft.DBforPostgreSQL/flexibleServers/firewallR
 
 resource database 'Microsoft.DBforPostgreSQL/flexibleServers/databases@2023-06-01-preview' = {
   parent: postgres
-  name: 'cloudguard'
+  name: 'finopslab'
 }
 
 output fqdn string = postgres.properties.fullyQualifiedDomainName

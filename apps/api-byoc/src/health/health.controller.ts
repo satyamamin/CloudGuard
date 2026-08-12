@@ -1,5 +1,5 @@
 import { Controller, Get } from "@nestjs/common";
-import { HealthResponse } from "@cloudguard/shared";
+import { HealthResponse } from "@finops-lab/shared";
 
 const API_VERSION = "0.1.0";
 

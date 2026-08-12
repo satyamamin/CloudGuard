@@ -1,5 +1,5 @@
 import { Controller, Get, HttpCode, Post } from "@nestjs/common";
-import { InstanceStatus, SyncResult } from "@cloudguard/shared";
+import { InstanceStatus, SyncResult } from "@finops-lab/shared";
 import { SyncService } from "./sync.service";
 
 @Controller()

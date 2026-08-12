@@ -1,7 +1,7 @@
 "use client";
 
 import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, TooltipContentProps, XAxis, YAxis } from "recharts";
-import { AccumulatedCost } from "@cloudguard/shared";
+import { AccumulatedCost } from "@finops-lab/shared";
 import { formatCompactCurrency, formatCurrency, formatDateLabel } from "@/lib/format";
 import { EmptyState } from "./empty-state";
 

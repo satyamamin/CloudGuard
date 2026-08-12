@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 This repo contains **two unrelated layers**, not a single application:
 
-1. **The real CloudGuard 360 product** — an npm-workspaces monorepo (`apps/`, `packages/`, `infra/bicep`) implementing the v1 "Connect Azure" onboarding flow. This is where active development happens.
+1. **The real FinOps Lab product** — an npm-workspaces monorepo (`apps/`, `packages/`, `infra/bicep`) implementing the v1 "Connect Azure" onboarding flow. This is where active development happens.
 2. **Planning artifacts** for the product, organized by tier under `docs/`:
    - Shared/cross-tier, at `docs/` root: `architecture.md` (canonical per-layer infra choice + build status across both tiers), `byoc-review-and-tier-comparison.md` (session notes on the BYOC review and tier-prioritization decision), `frontend-design-decisions.md` (running log of `apps/web` UI/UX decisions, applies regardless of tier), `initial-vision-archive.md` (a consolidated, explicitly-historical snapshot of the founder's original pre-build vision — superseded, kept for reference only).
    - `docs/byoc/` — BYOC-tier docs. `connect-azure.md` (current, authoritative, the tier that actually ships) and `cost-dashboard-frontend.md`, `azure-cost-management-endpoints.md` document what's built; `docs/byoc/plan/` holds not-yet-built BYOC work (`cost-management-429-resilience.md` — Phase 1 pre-launch 429 guardrail + Phase 2 deferred synced-cost-history fallback; `finalize-byoc-flow.md` — local/real-Azure verification pass).
@@ -18,25 +18,25 @@ This repo contains **two unrelated layers**, not a single application:
 
 ## Scope decision: v1 ships BYOC-only
 
-As of 2026-08-06, initial shipping is **BYOC-only** — the flow already built and documented in `docs/byoc/connect-azure.md` (Bicep "Deploy to Azure" + Managed Identity), stuck with deliberately because it needs zero CloudGuard-owned Azure infrastructure and reuses 100% of already-shipped work. Two things are explicitly deferred, not abandoned:
+As of 2026-08-06, initial shipping is **BYOC-only** — the flow already built and documented in `docs/byoc/connect-azure.md` (Bicep "Deploy to Azure" + Managed Identity), stuck with deliberately because it needs zero FinOps Lab-owned Azure infrastructure and reuses 100% of already-shipped work. Two things are explicitly deferred, not abandoned:
 
-- **The SaaS tier** (a separate centrally-hosted multi-tenant backend on Railway/Neon, cross-tenant Azure access via a CloudGuard-owned multi-tenant App Registration) — architecture is fully designed and locked in `docs/saas/plan/cloudguard-hosted.md`. A scaffold (`apps/api-saas`: health endpoint, `Tenant`/`AzureConnection` schema with Row-Level Security shipped and verified) existed and was removed from the working tree before the connection/consent flow was built — preserved in git history at commit `335dde2`, not part of the current codebase. Revisit after initial customer traction.
+- **The SaaS tier** (a separate centrally-hosted multi-tenant backend on Railway/Neon, cross-tenant Azure access via a FinOps Lab-owned multi-tenant App Registration) — architecture is fully designed and locked in `docs/saas/plan/cloudguard-hosted.md`. A scaffold (`apps/api-saas`: health endpoint, `Tenant`/`AzureConnection` schema with Row-Level Security shipped and verified) existed and was removed from the working tree before the connection/consent flow was built — preserved in git history at commit `335dde2`, not part of the current codebase. Revisit after initial customer traction.
 - **A manual-credential onboarding path for BYOC** — for customers who self-host `apps/api-byoc` outside Azure-managed compute (on-prem, another cloud), where Managed Identity has nothing to resolve. Not yet specified or built; `apps/api-byoc/src/azure/azure-credential.provider.ts` today only supports Managed Identity and `az login`, no `ClientSecretCredential` path.
 
-## Architecture (v1 — customer-hosted, no CloudGuard backend)
+## Architecture (v1 — customer-hosted, no FinOps Lab backend)
 
 The core architectural decision, documented in **`docs/byoc/connect-azure.md`** (read this before touching the connect flow — it is the source of truth and supersedes the older Service-Principal/shared-backend version of the doc):
 
-- CloudGuard has **no backend or database of its own**. A customer provisions the backend + Postgres directly **inside their own Azure tenant** via a "Deploy to Azure" button (ARM/Bicep). CloudGuard only hosts the frontend centrally (Next.js, intended for Vercel).
+- FinOps Lab has **no backend or database of its own**. A customer provisions the backend + Postgres directly **inside their own Azure tenant** via a "Deploy to Azure" button (ARM/Bicep). FinOps Lab only hosts the frontend centrally (Next.js, intended for Vercel).
 - The deployed backend authenticates to Azure Cost Management / Resource Graph via a **system-assigned Managed Identity** — no client secret is ever entered, stored, or transmitted (this replaced an earlier cross-tenant `ClientSecretCredential` design).
 - Isolation between customers is **physical** (one Postgres instance per deployment), not row-level — there is no multi-tenancy scoping column in the schema.
-- The frontend pairs with a customer's deployed instance via a `Backend URL` + `API key` (shown once as a deployment output), stored in **Clerk private organization metadata** — deliberately not a CloudGuard-side database, and deliberately not Clerk *public* metadata (which is client-readable). All reads/writes of the pairing happen server-side.
+- The frontend pairs with a customer's deployed instance via a `Backend URL` + `API key` (shown once as a deployment output), stored in **Clerk private organization metadata** — deliberately not a FinOps Lab-side database, and deliberately not Clerk *public* metadata (which is client-readable). All reads/writes of the pairing happen server-side.
 
 ### Monorepo layout
 
 ```
 apps/api-byoc/       NestJS backend — the code deployed into the customer's tenant (BYOC, ships)
-apps/web/       Next.js frontend — the only thing CloudGuard hosts centrally
+apps/web/       Next.js frontend — the only thing FinOps Lab hosts centrally
 packages/shared/  Zod schemas + types shared by both apps (built to dist/, consumed as a normal compiled workspace dependency — not source-transpiled by either bundler)
 infra/bicep/    The "Deploy to Azure" template
 ```
@@ -70,7 +70,7 @@ npm install                    # installs all workspaces
 npm run dev:api                # apps/api-byoc in watch mode
 npm run dev:web                # apps/web (Next.js dev server)
 npm run build                  # packages/shared -> apps/api-byoc -> apps/web, in order
-npm run build:shared           # packages/shared only (do this first if apps/* fail to resolve @cloudguard/shared)
+npm run build:shared           # packages/shared only (do this first if apps/* fail to resolve @finops-lab/shared)
 ```
 
 `apps/api-byoc` (from `apps/api-byoc/`, or via `-w apps/api-byoc` from root):
@@ -95,7 +95,7 @@ npm run build -w apps/web
 npm run lint -w apps/web
 ```
 
-`apps/web/.eslintrc.json` (`{"extends": "next/core-web-vitals"}`) and `eslint`/`eslint-config-next` are already installed and committed. If ESLint ever needs reinstalling, don't let `next lint`'s interactive setup auto-install — it defaults to `pnpm` on this machine, which can't resolve the workspace-internal `@cloudguard/shared` package and fails with a registry 404. Install via `npm install -D eslint@^8 eslint-config-next@^14 -w apps/web` instead, pinned to match the installed `next` major version (latest `eslint-config-next` requires ESLint 9).
+`apps/web/.eslintrc.json` (`{"extends": "next/core-web-vitals"}`) and `eslint`/`eslint-config-next` are already installed and committed. If ESLint ever needs reinstalling, don't let `next lint`'s interactive setup auto-install — it defaults to `pnpm` on this machine, which can't resolve the workspace-internal `@finops-lab/shared` package and fails with a registry 404. Install via `npm install -D eslint@^8 eslint-config-next@^14 -w apps/web` instead, pinned to match the installed `next` major version (latest `eslint-config-next` requires ESLint 9).
 
 `infra/bicep` (requires `az bicep install` once):
 

@@ -4,7 +4,7 @@ import {
   CostByResourceResponse,
   CostByServiceResponse,
   DailyCostsResponse,
-} from "@cloudguard/shared";
+} from "@finops-lab/shared";
 import { CostManagementService } from "../azure/cost-management.service";
 import { InstanceService } from "../instance/instance.service";
 

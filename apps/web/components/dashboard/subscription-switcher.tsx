@@ -1,7 +1,7 @@
 "use client";
 
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { AzureSubscription } from "@cloudguard/shared";
+import { AzureSubscription } from "@finops-lab/shared";
 
 interface SubscriptionSwitcherProps {
   subscriptions: AzureSubscription[];

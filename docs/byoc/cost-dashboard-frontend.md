@@ -6,7 +6,7 @@ dashboard sits downstream of).
 
 ## 1. What this is
 
-A cost-visibility dashboard added to `apps/web` (the only thing CloudGuard hosts
+A cost-visibility dashboard added to `apps/web` (the only thing FinOps Lab hosts
 centrally), rendering the four Cost Management views already exposed by a
 customer's self-hosted `apps/api-byoc` instance:
 

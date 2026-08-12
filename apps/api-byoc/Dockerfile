@@ -22,8 +22,8 @@ WORKDIR /app
 ENV NODE_ENV=production
 
 COPY --from=builder /repo/node_modules ./node_modules
-COPY --from=builder /repo/packages/shared/dist ./node_modules/@cloudguard/shared/dist
-COPY --from=builder /repo/packages/shared/package.json ./node_modules/@cloudguard/shared/package.json
+COPY --from=builder /repo/packages/shared/dist ./node_modules/@finops-lab/shared/dist
+COPY --from=builder /repo/packages/shared/package.json ./node_modules/@finops-lab/shared/package.json
 COPY --from=builder /repo/apps/api-byoc/node_modules ./apps/api-byoc/node_modules
 COPY --from=builder /repo/apps/api-byoc/dist ./apps/api-byoc/dist
 COPY --from=builder /repo/apps/api-byoc/prisma ./apps/api-byoc/prisma

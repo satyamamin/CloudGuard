@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, TooltipContentProps, XAxis, YAxis } from "recharts";
-import { DailyCost } from "@cloudguard/shared";
+import { DailyCost } from "@finops-lab/shared";
 import { formatCompactCurrency, formatCurrency, formatDateLabel } from "@/lib/format";
 import { EmptyState } from "./empty-state";
 

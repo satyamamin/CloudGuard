@@ -1,4 +1,4 @@
-# CloudGuard 360 — Frontend Design Decisions
+# FinOps Lab — Frontend Design Decisions
 
 > Running log of UI/UX decisions, competitive references, and rationale.
 > Append new entries at the bottom.
@@ -35,7 +35,7 @@ This maps directly to the three audiences the Emeis assessment named:
 One product, three depths.
 
 #### Drop from Holori
-The world map. It's multi-cloud vanity; CloudGuard 360 is Azure-only and buyers care about subscription / resource-group / tag breakdowns, not region pins.
+The world map. It's multi-cloud vanity; FinOps Lab is Azure-only and buyers care about subscription / resource-group / tag breakdowns, not region pins.
 
 #### Defer from Turbo360
 The resource tree. It's the most expensive component to build well (lazy loading, selection state, deep links).

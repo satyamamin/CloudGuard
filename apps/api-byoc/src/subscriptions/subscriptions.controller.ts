@@ -1,5 +1,5 @@
 import { Body, Controller, Get, HttpCode, Post } from "@nestjs/common";
-import { AzureSubscription } from "@cloudguard/shared";
+import { AzureSubscription } from "@finops-lab/shared";
 import { SubscriptionsService } from "./subscriptions.service";
 import { SelectSubscriptionsDto } from "./dto/select-subscriptions.dto";
 

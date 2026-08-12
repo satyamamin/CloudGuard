@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-// The pairing a CloudGuard org stores (in Clerk private org metadata) once
+// The pairing a FinOps Lab org stores (in Clerk private org metadata) once
 // it links to a customer-deployed backend instance from a "Deploy to Azure" run.
 export const instancePairingSchema = z.object({
   backendUrl: z.string().url(),

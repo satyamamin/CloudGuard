@@ -1,6 +1,6 @@
 # Azure Cost Management endpoints — implemented vs. available
 
-Reference doc: what CloudGuard's `apps/api-byoc` currently exposes for Cost Management data, versus the full surface Microsoft's `@azure/arm-costmanagement` SDK offers that hasn't been touched yet. All operation groups below are confirmed directly from the installed SDK (`node_modules/@azure/arm-costmanagement`), not from memory.
+Reference doc: what FinOps Lab's `apps/api-byoc` currently exposes for Cost Management data, versus the full surface Microsoft's `@azure/arm-costmanagement` SDK offers that hasn't been touched yet. All operation groups below are confirmed directly from the installed SDK (`node_modules/@azure/arm-costmanagement`), not from memory.
 
 ## Implemented in this project
 
@@ -28,7 +28,7 @@ All four share a 30-minute in-memory cache in `CostManagementService` (`apps/api
 
 Every other operation group the SDK exposes (`node_modules/@azure/arm-costmanagement/dist/commonjs/classic/`):
 
-| Operation group | What it does | Relevance to CloudGuard |
+| Operation group | What it does | Relevance to FinOps Lab |
 |---|---|---|
 | **`forecast`** | Predicted future spend for a scope, based on historical trend | High — natural fifth view, same pattern as the four already built |
 | **`budgets`** | Create/read/update/delete spending budgets (threshold + time period) with alerting | High — matches "Budget Alerts & Forecasting" in the original MVP scope (`docs/initial-vision-archive.md`) |

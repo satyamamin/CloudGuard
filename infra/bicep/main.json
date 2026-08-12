@@ -6,13 +6,13 @@
     "_generator": {
       "name": "bicep",
       "version": "0.46.1.21595",
-      "templateHash": "8375434338361276530"
+      "templateHash": "2121574947429973915"
     }
   },
   "parameters": {
     "environmentName": {
       "type": "string",
-      "defaultValue": "cloudguard",
+      "defaultValue": "finops-lab",
       "metadata": {
         "description": "Prefix used to name all provisioned resources."
       }
@@ -26,23 +26,23 @@
     },
     "containerImage": {
       "type": "string",
-      "defaultValue": "ghcr.io/satyamamin/cloudguard-api:latest",
+      "defaultValue": "ghcr.io/satyamamin/finops-lab-api:latest",
       "metadata": {
         "description": "Container image for the backend API. Defaults to the public GHCR image built from apps/api-byoc/Dockerfile."
       }
     },
     "frontendOrigin": {
       "type": "string",
-      "defaultValue": "https://cloudguard-360.vercel.app",
+      "defaultValue": "https://finops-lab.vercel.app",
       "metadata": {
-        "description": "Origin of the CloudGuard frontend allowed to call this backend (CORS)."
+        "description": "Origin of the FinOps Lab frontend allowed to call this backend (CORS)."
       }
     },
     "apiKey": {
       "type": "securestring",
       "defaultValue": "[newGuid()]",
       "metadata": {
-        "description": "Shown once as a deployment output; the customer pastes it into the CloudGuard frontend to pair. NOTE: Azure deployment outputs remain visible in this resource group's Deployment history to anyone with read access — accepted as a v1 trial-scope tradeoff, see docs/byoc/connect-azure.md."
+        "description": "Shown once as a deployment output; the customer pastes it into the FinOps Lab frontend to pair. NOTE: Azure deployment outputs remain visible in this resource group's Deployment history to anyone with read access — accepted as a v1 trial-scope tradeoff, see docs/byoc/connect-azure.md."
       }
     },
     "postgresAdminPassword": {
@@ -51,7 +51,7 @@
     }
   },
   "variables": {
-    "postgresAdminLogin": "cloudguard",
+    "postgresAdminLogin": "finopslab",
     "postgresServerName": "[format('{0}-pg-{1}', parameters('environmentName'), uniqueString(resourceGroup().id))]",
     "containerAppEnvName": "[format('{0}-env', parameters('environmentName'))]",
     "containerAppName": "[format('{0}-api', parameters('environmentName'))]"
@@ -163,7 +163,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.46.1.21595",
-              "templateHash": "13295502000280896791"
+              "templateHash": "17265137857038744736"
             }
           },
           "parameters": {
@@ -221,7 +221,7 @@
             {
               "type": "Microsoft.DBforPostgreSQL/flexibleServers/databases",
               "apiVersion": "2023-06-01-preview",
-              "name": "[format('{0}/{1}', parameters('serverName'), 'cloudguard')]",
+              "name": "[format('{0}/{1}', parameters('serverName'), 'finopslab')]",
               "dependsOn": [
                 "[resourceId('Microsoft.DBforPostgreSQL/flexibleServers', parameters('serverName'))]"
               ]
@@ -259,7 +259,7 @@
             "value": "[parameters('containerImage')]"
           },
           "databaseUrl": {
-            "value": "[format('postgresql://{0}:{1}@{2}:5432/cloudguard?sslmode=require', variables('postgresAdminLogin'), parameters('postgresAdminPassword'), reference('postgres').outputs.fqdn.value)]"
+            "value": "[format('postgresql://{0}:{1}@{2}:5432/finopslab?sslmode=require', variables('postgresAdminLogin'), parameters('postgresAdminPassword'), reference('postgres').outputs.fqdn.value)]"
           },
           "apiKey": {
             "value": "[parameters('apiKey')]"
@@ -451,7 +451,7 @@
     "backendUrl": {
       "type": "string",
       "metadata": {
-        "description": "Deployment output: paste into CloudGuard's frontend along with the API key to pair."
+        "description": "Deployment output: paste into FinOps Lab's frontend along with the API key to pair."
       },
       "value": "[format('https://{0}', reference('containerApp').outputs.fqdn.value)]"
     },

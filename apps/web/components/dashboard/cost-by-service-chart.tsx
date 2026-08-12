@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, TooltipContentProps, XAxis, YAxis } from "recharts";
-import { ServiceCost } from "@cloudguard/shared";
+import { ServiceCost } from "@finops-lab/shared";
 import { formatCompactCurrency, formatCurrency } from "@/lib/format";
 import { EmptyState } from "./empty-state";
 

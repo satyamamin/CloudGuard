@@ -1,5 +1,5 @@
 import { Injectable } from "@nestjs/common";
-import { InstanceStatus, SyncResult } from "@cloudguard/shared";
+import { InstanceStatus, SyncResult } from "@finops-lab/shared";
 import { InstanceService } from "../instance/instance.service";
 import { CostManagementService } from "../azure/cost-management.service";
 

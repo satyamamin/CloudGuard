@@ -1,7 +1,7 @@
 # Builds and pushes apps/api-byoc's Dockerfile to GHCR so infra/bicep/main.bicep's
 # container-app.bicep has a real image to pull. NOTE: GitHub Packages default
 # new packages to private — after the first successful push, set the
-# `cloudguard-api` package visibility to Public in repo/org package settings,
+# `finops-lab-api` package visibility to Public in repo/org package settings,
 # since the Container App has no registry credentials configured (see
 # infra/bicep/README.md).
 name: Build API image
@@ -37,4 +37,4 @@ jobs:
           context: .
           file: apps/api-byoc/Dockerfile
           push: true
-          tags: ghcr.io/${{ github.repository_owner }}/cloudguard-api:latest,ghcr.io/${{ github.repository_owner }}/cloudguard-api:${{ github.sha }}
+          tags: ghcr.io/${{ github.repository_owner }}/finops-lab-api:latest,ghcr.io/${{ github.repository_owner }}/finops-lab-api:${{ github.sha }}

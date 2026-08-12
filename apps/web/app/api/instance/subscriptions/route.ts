@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
-import { selectSubscriptionsRequestSchema } from "@cloudguard/shared";
+import { selectSubscriptionsRequestSchema } from "@finops-lab/shared";
 import { getInstancePairing } from "@/lib/clerk-org-metadata";
 import { backendClientFor } from "@/lib/backend-client";
 

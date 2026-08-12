@@ -42,7 +42,7 @@ export function PairingForm({ onPaired }: { onPaired: () => void }) {
         <Input
           type="url"
           required
-          placeholder="https://cloudguard-api.happysea-1234.westeurope.azurecontainerapps.io"
+          placeholder="https://finops-lab-api.happysea-1234.westeurope.azurecontainerapps.io"
           value={backendUrl}
           onChange={(e) => setBackendUrl(e.target.value)}
         />

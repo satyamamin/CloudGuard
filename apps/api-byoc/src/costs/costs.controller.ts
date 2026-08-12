@@ -5,7 +5,7 @@ import {
   CostByResourceResponse,
   CostByServiceResponse,
   DailyCostsResponse,
-} from "@cloudguard/shared";
+} from "@finops-lab/shared";
 import { CostsService } from "./costs.service";
 import { CostsQueryDto } from "./dto/costs-query.dto";
 

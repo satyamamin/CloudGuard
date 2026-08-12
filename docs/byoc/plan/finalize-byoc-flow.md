@@ -50,7 +50,7 @@ container).
   separate feature, not yet specified. Tracked on its own, not part of
   finalizing the *existing* flow.
 - **Deploying `apps/web` to Vercel** — the documented end-state has
-  CloudGuard hosting the frontend centrally, but that's a hosting task
+  FinOps Lab hosting the frontend centrally, but that's a hosting task
   independent of whether the BYOC backend flow itself works. Noted as a
   stretch step at the end of Phase 2, not required to call this plan done.
 - **The known, accepted API-key-not-ephemeral gap** (`infra/bicep/README.md`
@@ -139,7 +139,7 @@ container boot.
    az bicep build --file infra/bicep/main.bicep --outfile infra/bicep/main.json
    ```
 2. Push to `main` — the Deploy-to-Azure button and raw-URL validation both
-   read from `github.com/satyamamin/CloudGuard@main`.
+   read from `github.com/satyamamin/FinOps Lab@main`.
 3. Structural validation (cheap, no resources created):
    ```
    az deployment group validate --resource-group <test-rg> --template-file infra/bicep/main.json

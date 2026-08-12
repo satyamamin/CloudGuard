@@ -8,15 +8,15 @@
 
 ## Architecture pivot (why this doc changed)
 
-**v0 plan (shared SaaS backend):** CloudGuard hosts one multi-tenant backend
+**v0 plan (shared SaaS backend):** FinOps Lab hosts one multi-tenant backend
 + database. Each customer creates a Service Principal in their own tenant and
-pastes Tenant ID / Client ID / Secret into a form so CloudGuard's shared
+pastes Tenant ID / Client ID / Secret into a form so FinOps Lab's shared
 backend can read their data cross-tenant.
 
-**v1 plan (this doc):** CloudGuard has **no backend of its own yet**. The
+**v1 plan (this doc):** FinOps Lab has **no backend of its own yet**. The
 customer deploys the backend + database directly **into their own Azure
 tenant** via a "Deploy to Azure" button (ARM/Bicep template). The only thing
-CloudGuard hosts centrally is the frontend (Next.js on Vercel).
+FinOps Lab hosts centrally is the frontend (Next.js on Vercel).
 
 This is a strictly better fit for the GDPR/EU-data-residency pitch already in
 the business plan — customer data never leaves their own tenant, because
@@ -41,7 +41,7 @@ The backend now runs as a resource *inside* the customer's own subscription.
 It authenticates to Cost Management / Resource Graph with a **system-assigned
 Managed Identity** — `DefaultAzureCredential` works immediately, because
 there is no cross-tenant boundary left to cross. This is the same
-credential pattern already decided for CloudGuard's own infrastructure; v1
+credential pattern already decided for FinOps Lab's own infrastructure; v1
 simply extends it to every customer deployment instead of needing a second,
 cross-tenant pattern (`ClientSecretCredential`) at all.
 
@@ -62,7 +62,7 @@ string; that's an internal implementation detail, not part of this flow.)
 
 ---
 
-## Deployment parameters (Azure's own form, not CloudGuard's UI)
+## Deployment parameters (Azure's own form, not FinOps Lab's UI)
 
 | Field | Notes |
 |---|---|
@@ -71,14 +71,14 @@ string; that's an internal implementation detail, not part of this flow.)
 | Region | EU-based options only, to match the GDPR/data-residency pitch |
 | Environment name / prefix | Used to name the provisioned resources |
 
-## Fields on CloudGuard's frontend (post-deploy, one-time)
+## Fields on FinOps Lab's frontend (post-deploy, one-time)
 
 | Field | Type | Required | Notes |
 |---|---|---|---|
 | Backend URL | string | Yes | Deployment output — where the customer's instance lives |
 | API key | string (masked input) | Yes | Deployment output — authenticates the frontend to *this customer's* backend only |
 
-**v1 shortcut (flag to revisit):** since CloudGuard has no backend of its own
+**v1 shortcut (flag to revisit):** since FinOps Lab has no backend of its own
 to persist this pairing, store Backend URL + API key in **Clerk
 organization metadata** rather than standing up a database just to hold two
 strings. Fine for a trial; revisit before this needs to survive a Clerk
@@ -94,7 +94,7 @@ Click "Deploy to Azure"
   → ARM/Bicep template provisions Container App + Postgres + Managed Identity
   → Template grants Reader + Cost Management Reader on the chosen subscription(s)
   → Deployment output: Backend URL + API key
-  → Customer pastes both into CloudGuard's frontend (one-time)
+  → Customer pastes both into FinOps Lab's frontend (one-time)
        → GET /health confirms the pairing works
   → Discover  → GET  /subscriptions
   → Select    → POST /subscriptions/select
@@ -151,8 +151,8 @@ model Instance {
 - The frontend↔backend API key is shown once at deployment; store it masked
   wherever it's displayed again
 - Postgres lives inside the customer's own tenant/region — data residency is
-  automatic, not something CloudGuard has to engineer
-- No CloudGuard-side database in v1 — nothing centrally aggregated, nothing
+  automatic, not something FinOps Lab has to engineer
+- No FinOps Lab-side database in v1 — nothing centrally aggregated, nothing
   centrally at risk
 
 ---

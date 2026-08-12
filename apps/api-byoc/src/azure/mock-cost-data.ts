@@ -1,4 +1,4 @@
-import { DailyCost, ResourceCost, ServiceCost } from "@cloudguard/shared";
+import { DailyCost, ResourceCost, ServiceCost } from "@finops-lab/shared";
 
 // Dev-only fixtures for USE_MOCK_COST_DATA=true — lets UI work proceed without
 // burning Azure Cost Management's per-subscription throttle quota (see
@@ -15,13 +15,13 @@ const MOCK_SERVICES = [
   "Key Vault",
 ];
 
-const MOCK_RESOURCE_GROUP = "rg-cloudguard-dev";
+const MOCK_RESOURCE_GROUP = "rg-finops-lab-dev";
 const MOCK_RESOURCES = [
   { name: "vm-web-01", provider: "Microsoft.Compute/virtualMachines" },
-  { name: "stcloudguarddata", provider: "Microsoft.Storage/storageAccounts" },
-  { name: "psql-cloudguard", provider: "Microsoft.DBforPostgreSQL/flexibleServers" },
+  { name: "stfinopslabdata", provider: "Microsoft.Storage/storageAccounts" },
+  { name: "psql-finops-lab", provider: "Microsoft.DBforPostgreSQL/flexibleServers" },
   { name: "ca-api-prod", provider: "Microsoft.App/containerApps" },
-  { name: "kv-cloudguard-secrets", provider: "Microsoft.KeyVault/vaults" },
+  { name: "kv-finops-lab-secrets", provider: "Microsoft.KeyVault/vaults" },
 ];
 
 // Small deterministic hash -> [0, 1), so the same (subscriptionId, seed) pair

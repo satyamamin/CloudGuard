@@ -21,10 +21,10 @@ discard.
 
 ## Deploy-to-Azure button URL
 
-Once pushed to `github.com/satyamamin/CloudGuard` on `main`:
+Once pushed to `github.com/satyamamin/FinOps Lab` on `main`:
 
 ```
-https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2Fsatyamamin%2FCloudGuard%2Fmain%2Finfra%2Fbicep%2Fmain.json
+https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2Fsatyamamin%2FFinOps Lab%2Fmain%2Finfra%2Fbicep%2Fmain.json
 ```
 
 This requires the repo (or at least this file) to be publicly readable on

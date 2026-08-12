@@ -1,6 +1,6 @@
 import { Injectable } from "@nestjs/common";
 import { CostManagementClient, QueryResult } from "@azure/arm-costmanagement";
-import { AccumulatedCost, DailyCost, ResourceCost, ServiceCost } from "@cloudguard/shared";
+import { AccumulatedCost, DailyCost, ResourceCost, ServiceCost } from "@finops-lab/shared";
 import { AzureCredentialProvider } from "./azure-credential.provider";
 import { mockCostByResource, mockCostByService, mockDailyCosts } from "./mock-cost-data";
 

@@ -2,16 +2,28 @@ import { Injectable } from "@nestjs/common";
 import { CostManagementClient, QueryResult } from "@azure/arm-costmanagement";
 import { AccumulatedCost, DailyCost, ResourceCost, ServiceCost } from "@cloudguard/shared";
 import { AzureCredentialProvider } from "./azure-credential.provider";
+import { mockCostByResource, mockCostByService, mockDailyCosts } from "./mock-cost-data";
+
+// USE_MOCK_COST_DATA=true skips Azure Cost Management entirely for the three
+// dashboard-facing endpoints (daily, by-service, by-resource — accumulated
+// derives from daily so it's covered for free) and returns deterministic
+// canned data instead. Dev-only escape hatch from Azure's per-subscription
+// throttle quota (see CLAUDE.md) while iterating on dashboard UI. /sync's
+// queryLast30DaysCost is intentionally left real.
+const useMockCostData = process.env.USE_MOCK_COST_DATA === "true";
 
 // First-cut only: a single "cost by day, last 30 days" query per subscription.
 // Deliberately does not persist line-item cost rows — that's the deferred
-// TimescaleDB ingestion schema (see docs/connect-azure.md open items).
+// TimescaleDB ingestion schema (see docs/byoc/connect-azure.md open items).
 //
 // Azure's Cost Management Query API has a tight built-in throttling quota
 // (rolling window, roughly dozens of calls/hour per subscription) — an
-// in-memory cache keeps repeated local testing of the same
-// subscription/range from burning through it.
-const CACHE_TTL_MS = 30 * 60 * 1000;
+// in-memory cache keeps repeated querying of the same subscription/range
+// from burning through it. Default widened from 30 min to 4h per
+// docs/byoc/plan/cost-management-429-resilience.md's Phase 1 step 2 — cost data
+// already lags Azure-side by up to 24h, so a longer TTL costs nothing in
+// freshness while meaningfully cutting 429 risk. Override with COST_CACHE_TTL_MINUTES.
+const CACHE_TTL_MS = (Number(process.env.COST_CACHE_TTL_MINUTES) || 240) * 60 * 1000;
 
 @Injectable()
 export class CostManagementService {
@@ -30,25 +42,29 @@ export class CostManagementService {
   }
 
   async queryLast30DaysCost(azureSubscriptionId: string): Promise<{ totalCost: number; currency: string }> {
-    const client = new CostManagementClient(this.credentialProvider.get());
-    const scope = `/subscriptions/${azureSubscriptionId}`;
+    const { data } = await this.withCache(`sync:${azureSubscriptionId}`, async () => {
+      const client = new CostManagementClient(this.credentialProvider.get());
+      const scope = `/subscriptions/${azureSubscriptionId}`;
 
-    const result = await client.query.usage(scope, {
-      type: "ActualCost",
-      timeframe: "MonthToDate",
-      dataset: {
-        granularity: "Daily",
-        aggregation: {
-          totalCost: { name: "Cost", function: "Sum" },
+      const result = await client.query.usage(scope, {
+        type: "ActualCost",
+        timeframe: "MonthToDate",
+        dataset: {
+          granularity: "Daily",
+          aggregation: {
+            totalCost: { name: "Cost", function: "Sum" },
+          },
         },
-      },
+      });
+
+      const rows = result?.rows ?? [];
+      const totalCost = rows.reduce((sum: number, row) => sum + Number(row[0] ?? 0), 0);
+      const currency = (rows[0]?.[rows[0].length - 1] as string) ?? "EUR";
+
+      return { totalCost, currency };
     });
 
-    const rows = result?.rows ?? [];
-    const totalCost = rows.reduce((sum: number, row) => sum + Number(row[0] ?? 0), 0);
-    const currency = (rows[0]?.[rows[0].length - 1] as string) ?? "EUR";
-
-    return { totalCost, currency };
+    return data;
   }
 
   async queryDailyCosts(
@@ -56,9 +72,13 @@ export class CostManagementService {
     days: number,
   ): Promise<{ data: { currency: string; from: string; to: string; days: DailyCost[] }; cached: boolean }> {
     return this.withCache(`daily:${azureSubscriptionId}:${days}`, async () => {
+      const { from, to, fromIso, toIso } = customDateRange(days);
+      if (useMockCostData) {
+        return mockDailyCosts(azureSubscriptionId, fromIso, toIso);
+      }
+
       const client = new CostManagementClient(this.credentialProvider.get());
       const scope = `/subscriptions/${azureSubscriptionId}`;
-      const { from, to, fromIso, toIso } = customDateRange(days);
 
       const result = await client.query.usage(scope, {
         type: "ActualCost",
@@ -110,9 +130,13 @@ export class CostManagementService {
     days: number,
   ): Promise<{ data: { currency: string; from: string; to: string; services: ServiceCost[] }; cached: boolean }> {
     return this.withCache(`byService:${azureSubscriptionId}:${days}`, async () => {
+      const { from, to, fromIso, toIso } = customDateRange(days);
+      if (useMockCostData) {
+        return mockCostByService(azureSubscriptionId, fromIso, toIso);
+      }
+
       const client = new CostManagementClient(this.credentialProvider.get());
       const scope = `/subscriptions/${azureSubscriptionId}`;
-      const { from, to, fromIso, toIso } = customDateRange(days);
 
       const result = await client.query.usage(scope, {
         type: "ActualCost",
@@ -150,9 +174,13 @@ export class CostManagementService {
     days: number,
   ): Promise<{ data: { currency: string; from: string; to: string; resources: ResourceCost[] }; cached: boolean }> {
     return this.withCache(`byResource:${azureSubscriptionId}:${days}`, async () => {
+      const { from, to, fromIso, toIso } = customDateRange(days);
+      if (useMockCostData) {
+        return mockCostByResource(azureSubscriptionId, fromIso, toIso);
+      }
+
       const client = new CostManagementClient(this.credentialProvider.get());
       const scope = `/subscriptions/${azureSubscriptionId}`;
-      const { from, to, fromIso, toIso } = customDateRange(days);
 
       const result = await client.query.usage(scope, {
         type: "ActualCost",

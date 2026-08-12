@@ -5,8 +5,8 @@
   "metadata": {
     "_generator": {
       "name": "bicep",
-      "version": "0.45.15.27210",
-      "templateHash": "13646640766816585422"
+      "version": "0.46.1.21595",
+      "templateHash": "8375434338361276530"
     }
   },
   "parameters": {
@@ -28,7 +28,7 @@
       "type": "string",
       "defaultValue": "ghcr.io/satyamamin/cloudguard-api:latest",
       "metadata": {
-        "description": "Container image for the backend API. Defaults to the public GHCR image built from apps/api/Dockerfile."
+        "description": "Container image for the backend API. Defaults to the public GHCR image built from apps/api-byoc/Dockerfile."
       }
     },
     "frontendOrigin": {
@@ -42,7 +42,7 @@
       "type": "securestring",
       "defaultValue": "[newGuid()]",
       "metadata": {
-        "description": "Shown once as a deployment output; the customer pastes it into the CloudGuard frontend to pair. NOTE: Azure deployment outputs remain visible in this resource group's Deployment history to anyone with read access — accepted as a v1 trial-scope tradeoff, see docs/connect-azure.md."
+        "description": "Shown once as a deployment output; the customer pastes it into the CloudGuard frontend to pair. NOTE: Azure deployment outputs remain visible in this resource group's Deployment history to anyone with read access — accepted as a v1 trial-scope tradeoff, see docs/byoc/connect-azure.md."
       }
     },
     "postgresAdminPassword": {
@@ -80,8 +80,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.45.15.27210",
-              "templateHash": "14676190537444301132"
+              "version": "0.46.1.21595",
+              "templateHash": "14297648890825199717"
             }
           },
           "parameters": {
@@ -162,8 +162,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.45.15.27210",
-              "templateHash": "3417397529235541500"
+              "version": "0.46.1.21595",
+              "templateHash": "13295502000280896791"
             }
           },
           "parameters": {
@@ -274,8 +274,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.45.15.27210",
-              "templateHash": "9059412474570087301"
+              "version": "0.46.1.21595",
+              "templateHash": "1325322968524871148"
             }
           },
           "parameters": {
@@ -405,8 +405,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.45.15.27210",
-              "templateHash": "9948052969493014814"
+              "version": "0.46.1.21595",
+              "templateHash": "17062637975520935800"
             }
           },
           "parameters": {

@@ -33,8 +33,8 @@ function costsQueryString(query?: CostsQuery): string {
 }
 
 // Thin fetch wrapper around the endpoints exposed by a customer's deployed
-// backend instance — the 5 documented in docs/connect-azure.md, plus the 4
-// undocumented /costs/* endpoints (see docs/azure-cost-management-endpoints.md).
+// backend instance — the 5 documented in docs/byoc/connect-azure.md, plus the 4
+// undocumented /costs/* endpoints (see docs/byoc/azure-cost-management-endpoints.md).
 // Every call here runs server-side (Route Handlers) so the API key never
 // reaches the browser.
 class BackendClient {

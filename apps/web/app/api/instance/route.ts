@@ -22,7 +22,7 @@ export async function POST(request: NextRequest) {
   }
 
   // Confirm the pairing actually works before persisting it (matches the
-  // onboarding sequence in docs/connect-azure.md: "GET /health confirms the
+  // onboarding sequence in docs/byoc/connect-azure.md: "GET /health confirms the
   // pairing works" happens right after the customer pastes both values).
   try {
     await backendClientFor(parsed.data).health();

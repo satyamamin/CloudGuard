@@ -4,7 +4,7 @@ import { Request } from "express";
 // Single shared-secret auth: the frontend pairs with exactly one deployed
 // instance using the API key produced as a deployment output (see
 // infra/bicep). Applied globally, including to GET /health — per
-// docs/connect-azure.md the health check's whole purpose is to confirm the
+// docs/byoc/connect-azure.md the health check's whole purpose is to confirm the
 // pairing (URL + key) is valid, so the key must already be presented there.
 @Injectable()
 export class ApiKeyGuard implements CanActivate {

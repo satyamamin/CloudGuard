@@ -6,7 +6,7 @@ import { InstancePairing, MaskedInstancePairing, instancePairingSchema, maskApiK
 // metadata — public metadata is readable client-side by any org member via
 // the Clerk React SDK. This file is the only place that reads/writes it,
 // and it's marked server-only so it can never be imported into a client
-// component by accident. See docs/connect-azure.md's "store it masked"
+// component by accident. See docs/byoc/connect-azure.md's "store it masked"
 // rule — this is the concrete mechanism behind that rule.
 
 interface PrivateMetadata {

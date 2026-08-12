@@ -38,7 +38,7 @@ export class SyncService {
 
       // First-cut only: pull a single cost summary per selected subscription.
       // Persisting granular cost rows is deferred (TimescaleDB ingestion,
-      // see docs/connect-azure.md open items) — this just proves the
+      // see docs/byoc/connect-azure.md open items) — this just proves the
       // Managed Identity → Cost Management path end to end.
       for (const azureSubscriptionId of instance.selectedSubscriptionIds) {
         await this.costManagementService.queryLast30DaysCost(azureSubscriptionId);

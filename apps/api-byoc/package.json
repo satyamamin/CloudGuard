@@ -1,5 +1,5 @@
 {
-  "name": "@cloudguard/api",
+  "name": "@cloudguard/api-byoc",
   "version": "0.0.0",
   "private": true,
   "scripts": {

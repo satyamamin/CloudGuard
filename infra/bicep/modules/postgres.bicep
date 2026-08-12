@@ -1,6 +1,6 @@
 // Azure Database for PostgreSQL Flexible Server — Burstable tier.
 // Right-sized for a trial, not the eventual production tier (see
-// docs/connect-azure.md — deferred deliberately).
+// docs/byoc/connect-azure.md — deferred deliberately).
 param serverName string
 param location string
 param administratorLogin string

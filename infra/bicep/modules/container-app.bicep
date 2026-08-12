@@ -1,6 +1,6 @@
 // The backend API Container App. System-assigned Managed Identity is what
 // lets it authenticate to Cost Management / Resource Graph with no stored
-// credential at all (see docs/connect-azure.md).
+// credential at all (see docs/byoc/connect-azure.md).
 param name string
 param location string
 param environmentId string
@@ -34,7 +34,7 @@ resource containerApp 'Microsoft.App/containerApps@2024-03-01' = {
       // Pinned to exactly 1 replica for v1: Prisma migrations run from the
       // container's own entrypoint at startup (docker-entrypoint.sh), and
       // concurrent `migrate deploy` calls across replicas would race. Also
-      // matches the in-memory sync re-entrancy lock in apps/api's SyncService,
+      // matches the in-memory sync re-entrancy lock in apps/api-byoc's SyncService,
       // which only holds correctly for a single running instance.
       scale: {
         minReplicas: 1

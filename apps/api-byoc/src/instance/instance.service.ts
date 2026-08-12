@@ -2,7 +2,7 @@ import { Injectable } from "@nestjs/common";
 import { Instance } from "@prisma/client";
 import { PrismaService } from "../prisma/prisma.service";
 
-// There is exactly one Instance row per deployment (see docs/connect-azure.md
+// There is exactly one Instance row per deployment (see docs/byoc/connect-azure.md
 // — "single configuration row", no multi-tenancy scoping). This helper is the
 // one place that assumption lives, so callers never have to know or care
 // about instance IDs.

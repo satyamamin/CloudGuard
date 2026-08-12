@@ -7,7 +7,7 @@ dist/
 .env*.local
 
 # apps/api-saas's Prisma client is generated to its own path (not the shared
-# node_modules/.prisma/client apps/api uses) to avoid the two schemas
+# node_modules/.prisma/client apps/api-byoc uses) to avoid the two schemas
 # overwriting each other's generated client — see prisma/schema.prisma.
 apps/api-saas/generated/
 

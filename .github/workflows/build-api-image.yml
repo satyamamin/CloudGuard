@@ -1,4 +1,4 @@
-# Builds and pushes apps/api's Dockerfile to GHCR so infra/bicep/main.bicep's
+# Builds and pushes apps/api-byoc's Dockerfile to GHCR so infra/bicep/main.bicep's
 # container-app.bicep has a real image to pull. NOTE: GitHub Packages default
 # new packages to private — after the first successful push, set the
 # `cloudguard-api` package visibility to Public in repo/org package settings,
@@ -10,7 +10,7 @@ on:
   push:
     branches: [ main ]
     paths:
-      - 'apps/api/**'
+      - 'apps/api-byoc/**'
       - 'packages/shared/**'
       - '.github/workflows/build-api-image.yml'
   workflow_dispatch:
@@ -35,6 +35,6 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           context: .
-          file: apps/api/Dockerfile
+          file: apps/api-byoc/Dockerfile
           push: true
           tags: ghcr.io/${{ github.repository_owner }}/cloudguard-api:latest,ghcr.io/${{ github.repository_owner }}/cloudguard-api:${{ github.sha }}

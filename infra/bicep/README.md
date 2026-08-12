@@ -1,7 +1,7 @@
 # Deploy to Azure template
 
 Provisions the v1 customer-hosted backend described in
-[`docs/connect-azure.md`](../../docs/connect-azure.md): a Container App
+[`docs/byoc/connect-azure.md`](../../docs/byoc/connect-azure.md): a Container App
 (system-assigned Managed Identity) + Postgres Flexible Server + Reader/Cost
 Management Reader role assignments, all inside the customer's own
 subscription.

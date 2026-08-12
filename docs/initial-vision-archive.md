@@ -14,7 +14,7 @@
 > - `cloudguard-notion-setup/setup.js` — a one-off Node script that provisioned a Notion
 >   workspace with the founder's dashboard, roadmap, sprint board, CRM, KPIs, and research notes.
 >
-> **`docs/connect-azure.md` is the current, authoritative architecture document for CloudGuard
+> **`docs/byoc/connect-azure.md` is the current, authoritative architecture document for CloudGuard
 > 360.** It describes the actual v1 product under active development. This archive is historical
 > only — several technical decisions described below were later reversed, most significantly the
 > move from a CloudGuard-hosted, multi-tenant backend to a **customer-hosted, single-tenant
@@ -33,7 +33,7 @@ shipped v1 product.
 
 ### 1.1 What changed — early vision vs. current product
 
-| Area | Early vision (this archive) | Current product (`docs/connect-azure.md`) |
+| Area | Early vision (this archive) | Current product (`docs/byoc/connect-azure.md`) |
 |---|---|---|
 | Backend framework | **FastAPI (Python)** *(per Notion script)* / **NestJS** *(per architecture deck — the deck and Notion script disagree; NestJS is what shipped)* | NestJS |
 | Backend hosting | Azure Container Apps, **hosted and operated by CloudGuard** (multi-tenant, Min 1/Max 10 replicas) | Deployed **into the customer's own Azure tenant** via "Deploy to Azure"; CloudGuard only hosts the frontend |
@@ -542,7 +542,7 @@ meant to unlock — framed around user-facing outcomes rather than just codebase
 - **Deliverables (verify):** `pnpm dev` starts web (3000) + api (3001); no TypeScript errors
   across monorepo; Prisma Studio shows Tenant + Connector tables; `packages/shared` types
   importable in both apps.
-- **Functional goals met:** project structure (apps/web, apps/api, packages/shared linked via
+- **Functional goals met:** project structure (apps/web, apps/api-byoc, packages/shared linked via
   pnpm workspaces); database schema (Tenant/Connector via Prisma migration); shared contracts
   (DTOs/Zod in packages/shared); dev server (hot reload, strict TypeScript).
 - **Not yet:** no auth, no login UI, no Azure SDK calls, no real data, no business logic.
@@ -677,7 +677,7 @@ Sub-nav tabs: **Structure · Scaffold Apps · Prisma · Env Files**
 - **Structure** — goal: empty but fully configured monorepo where every tool works, linting
   passes, packages see each other's types, no business logic yet. Scaffold: `mkdir
   cloudguard360 && git init && pnpm init`. Directory structure: `apps/web` (Next.js 14 frontend,
-  port 3000), `apps/api` (NestJS backend, port 3001), `packages/shared` (types/DTOs/Zod schemas
+  port 3000), `apps/api-byoc` (NestJS backend, port 3001), `packages/shared` (types/DTOs/Zod schemas
   used by both apps), `infra/` (Terraform files), plus `docker-compose.yml`,
   `pnpm-workspace.yaml`, `turbo.json`, `.gitignore`. Add Turborepo (`pnpm add -D turbo -w`).
 - **Scaffold Apps** — Next.js 14 via `pnpm create next-app@14 web --typescript --tailwind
@@ -691,7 +691,7 @@ Sub-nav tabs: **Structure · Scaffold Apps · Prisma · Env Files**
   `Connector` model (`id`, `tenantId`, relation to `Tenant`, `subscriptionId`, `displayName`,
   `status` default "active", `createdAt`). Run `prisma migrate dev --name init`, `prisma
   generate`, verify via `prisma studio`.
-- **Env Files** — never commit `.env`/`.env.local`. `apps/api/.env`: `DATABASE_URL`,
+- **Env Files** — never commit `.env`/`.env.local`. `apps/api-byoc/.env`: `DATABASE_URL`,
   `REDIS_URL`, `CLERK_SECRET_KEY`, `AZURE_SUBSCRIPTION_ID`, `PORT=3001`. `apps/web/.env.local`:
   `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`, `CLERK_SECRET_KEY`, `NEXT_PUBLIC_API_URL`. Phase 1
   complete when: `pnpm dev` starts both apps without errors, Prisma Studio shows Tenant/Connector
@@ -731,7 +731,7 @@ Sub-nav tabs: **TimescaleDB · Trigger.dev Job · API Endpoints · Redis Cache**
   chunks older than 7 days.
 - **Trigger.dev Job** — install `@trigger.dev/sdk`, configure `TRIGGER_API_KEY` /
   `TRIGGER_API_URL`. Ingestion job `ingest-azure-costs` (in
-  `apps/api/src/jobs/ingest-azure-costs.ts`) takes `{connectorId, subscriptionId, tenantId}`,
+  `apps/api-byoc/src/jobs/ingest-azure-costs.ts`) takes `{connectorId, subscriptionId, tenantId}`,
   authenticates via `DefaultAzureCredential`, calls `CostManagementClient.query.usage` with
   `MonthToDate` timeframe grouped by `ServiceName`, normalises and writes records to PostgreSQL,
   returns `{rowsIngested}`.
@@ -847,7 +847,7 @@ Pilot Proposal Template, One-Pager, Architecture Decision Records, Pricing Strat
 | CI/CD | GitHub Actions |
 | Monitoring | Sentry + Grafana (pending) |
 
-**The current, real product** (per `docs/connect-azure.md` / repo `CLAUDE.md`) instead uses:
+**The current, real product** (per `docs/byoc/connect-azure.md` / repo `CLAUDE.md`) instead uses:
 NestJS (not FastAPI/Python) as the backend, deployed **into the customer's own Azure tenant**
 (not a CloudGuard-hosted Container App); plain Postgres via Prisma (no TimescaleDB yet); no
 Redis; no Trigger.dev; Managed Identity auth (not just Clerk+Entra SSO) with no client secrets

@@ -2,7 +2,7 @@
 
 Azure cost management that deploys directly into a customer's own Azure tenant — CloudGuard hosts only the frontend; there is no CloudGuard-side backend or database.
 
-See [`docs/connect-azure.md`](docs/connect-azure.md) for the full architecture and endpoint contract, and [`CLAUDE.md`](CLAUDE.md) for detailed guidance on working in this repo.
+See [`docs/byoc/connect-azure.md`](docs/byoc/connect-azure.md) for the full architecture and endpoint contract, and [`CLAUDE.md`](CLAUDE.md) for detailed guidance on working in this repo.
 
 ## Architecture
 
@@ -14,31 +14,31 @@ See [`docs/connect-azure.md`](docs/connect-azure.md) for the full architecture a
 ## Repo structure
 
 ```
-apps/api/         NestJS backend — the code deployed into the customer's tenant
+apps/api-byoc/         NestJS backend — the code deployed into the customer's tenant
 apps/web/         Next.js frontend — the only thing CloudGuard hosts centrally
 packages/shared/  Zod schemas + types shared by both apps
 infra/bicep/       The "Deploy to Azure" template
-docs/              connect-azure.md (source of truth) + initial-vision-archive.md (historical only)
+docs/             architecture.md + other shared docs at root; docs/byoc/connect-azure.md (source of truth); docs/saas/plan/ (deferred tier)
 ```
 
 ## Getting started
 
 ```bash
 npm install
-npm run build:shared   # build packages/shared first — apps/api and apps/web depend on it
+npm run build:shared   # build packages/shared first — apps/api-byoc and apps/web depend on it
 ```
 
-### `apps/api` (NestJS backend)
+### `apps/api-byoc` (NestJS backend)
 
 ```bash
 docker compose -f docker-compose.dev.yml up -d      # local Postgres
-cp apps/api/.env.example apps/api/.env               # see file for AZURE_AUTH_MODE, API_KEY, etc.
-npm run prisma:generate -w apps/api
-npm run prisma:migrate:dev -w apps/api
+cp apps/api-byoc/.env.example apps/api-byoc/.env               # see file for AZURE_AUTH_MODE, API_KEY, etc.
+npm run prisma:generate -w apps/api-byoc
+npm run prisma:migrate:dev -w apps/api-byoc
 npm run dev:api                                       # http://localhost:3001
 ```
 
-For real Azure calls locally, set `AZURE_AUTH_MODE=cli` in `apps/api/.env` and run `az login` first.
+For real Azure calls locally, set `AZURE_AUTH_MODE=cli` in `apps/api-byoc/.env` and run `az login` first.
 
 ### `apps/web` (Next.js frontend)
 
@@ -71,7 +71,7 @@ One-time setup (`npm install`, `.env` files, Prisma migrate) only needs to happe
    docker compose -f docker-compose.dev.yml up -d
    ```
 
-3. **Start `apps/api`** (new terminal, leave running):
+3. **Start `apps/api-byoc`** (new terminal, leave running):
    ```bash
    npm run dev:api
    ```
@@ -95,14 +95,14 @@ Steps 1–6 above are automated by a single script:
 ```powershell
 .\local-dev-test\test-local-dev.ps1
 ```
-Idempotent — skips Docker/`apps/api`/`apps/web` if already running instead of starting duplicates, and reuses an already-open Chrome window rather than spawning a new one.
+Idempotent — skips Docker/`apps/api-byoc`/`apps/web` if already running instead of starting duplicates, and reuses an already-open Chrome window rather than spawning a new one.
 
 ## Commands
 
 | Command | Description |
 |---|---|
-| `npm run build` | Build `packages/shared` → `apps/api` → `apps/web`, in order |
-| `npm run dev:api` | `apps/api` in watch mode |
+| `npm run build` | Build `packages/shared` → `apps/api-byoc` → `apps/web`, in order |
+| `npm run dev:api` | `apps/api-byoc` in watch mode |
 | `npm run dev:web` | `apps/web` dev server |
 | `npm run lint -w apps/web` | Lint the frontend |
 

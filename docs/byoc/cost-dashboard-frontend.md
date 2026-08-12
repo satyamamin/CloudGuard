@@ -1,14 +1,14 @@
 # Cost dashboard — frontend implementation
 
 Audience: an outside reviewer assessing the `apps/web/app/dashboard` implementation
-(as opposed to `docs/connect-azure.md`, which documents the onboarding flow this
+(as opposed to `docs/byoc/connect-azure.md`, which documents the onboarding flow this
 dashboard sits downstream of).
 
 ## 1. What this is
 
 A cost-visibility dashboard added to `apps/web` (the only thing CloudGuard hosts
 centrally), rendering the four Cost Management views already exposed by a
-customer's self-hosted `apps/api` instance:
+customer's self-hosted `apps/api-byoc` instance:
 
 - **Overview** — a glanceable summary: spend this period vs. prior period, top
   service, top resource, accumulated-cost trend.
@@ -54,13 +54,13 @@ apps/web/app/api/instance/costs/{daily,accumulated,by-service,by-resource}/route
 apps/web/lib/backend-client.ts  (server-only, Zod-validates the response)
    │
    ▼  HTTPS + API key header
-Customer's deployed apps/api  →  Azure Cost Management API
+Customer's deployed apps/api-byoc  →  Azure Cost Management API
 ```
 
 Each of the four `costs/*/route.ts` handlers is ~15 lines and does exactly four
 things: confirm the signed-in user has an active Clerk organization, look up that
 org's backend pairing, forward the request, return JSON. No business logic lives
-in the route handlers — that's all in `apps/api`.
+in the route handlers — that's all in `apps/api-byoc`.
 
 ### 3.2 Page structure
 
@@ -126,7 +126,7 @@ resource" tiles and there's no cheaper way to derive that from daily data.
 
 `SubscriptionSwitcher` intentionally filters the full Azure subscription list
 down to only the subscriptions selected during onboarding
-(`Instance.selectedSubscriptionIds`) — `apps/api`'s `/costs/*` endpoints have no
+(`Instance.selectedSubscriptionIds`) — `apps/api-byoc`'s `/costs/*` endpoints have no
 synced context for a subscription that was never selected, so offering it in the
 dropdown would just produce empty/error states. If a customer has more Azure
 subscriptions than appear here, the fix is re-running subscription selection in
@@ -191,7 +191,7 @@ a hypothetical future metric where "up" is good.
 - **Errors surface as a real message, not a generic failure screen.** Every
   detail page wraps its fetch in try/catch and renders `<ErrorState>` with the
   actual thrown error message (which, notably, includes Azure Cost Management's
-  own `429` rate-limit wording when that's the cause — see `apps/api`'s
+  own `429` rate-limit wording when that's the cause — see `apps/api-byoc`'s
   `CostManagementService` for the caching that mitigates this in practice).
 
 ## 6. Screenshots
@@ -291,6 +291,6 @@ apps/web/
 - No automated tests — this repo has no test runner configured anywhere yet
   (see `CLAUDE.md`), so all verification so far has been manual, against real
   Azure data, in a browser.
-- `docs/connect-azure.md` (the source-of-truth onboarding doc) does not yet
+- `docs/byoc/connect-azure.md` (the source-of-truth onboarding doc) does not yet
   describe the dashboard in detail; this document is currently the primary
   reference for it.

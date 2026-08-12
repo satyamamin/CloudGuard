@@ -4,16 +4,16 @@
 > Status: **deferred — not in v1 scope.** Architecture decisions below are
 > locked for whenever this tier is picked back up, but initial shipping
 > (2026-08-06 decision) is BYOC-only, using the already-built
-> `docs/connect-azure.md` flow exclusively. `apps/api-saas` (health endpoint
+> `docs/byoc/connect-azure.md` flow exclusively. `apps/api-saas` (health endpoint
 > running, RLS shipped and verified on `azure_connection`, connection/cost
 > endpoints not started) was removed from the working tree — not
 > abandoned, just not carried forward as dead code while v1 focuses on
 > BYOC. The code is preserved in git history at commit `335dde2` and this
 > doc remains the source of truth for resuming it. Revisit after initial
 > customer traction.
-> Companion docs: `docs/connect-azure.md` (BYOC/self-hosted tier — the tier
+> Companion docs: `docs/byoc/connect-azure.md` (BYOC/self-hosted tier — the tier
 > that actually ships first; unaffected by this doc),
-> `docs/plan/architecture.md` (canonical per-layer infra choice + build status
+> `docs/architecture.md` (canonical per-layer infra choice + build status
 > across both tiers)
 
 ---
@@ -39,7 +39,7 @@ first.
 
 ## Why a second tier, and why this reopens a decision `connect-azure.md` made
 
-`docs/connect-azure.md`'s "Architecture pivot" section records CloudGuard
+`docs/byoc/connect-azure.md`'s "Architecture pivot" section records CloudGuard
 deliberately abandoning a shared multi-tenant backend + per-customer Service
 Principal ("v0") in favor of a customer-hosted, single-tenant backend ("v1")
 — specifically for the GDPR/EU-data-residency pitch: *"customer data never
@@ -51,7 +51,7 @@ option — not a replacement. Some customers want zero infrastructure to
 manage and are willing to trade the "no central database" pitch for
 speed-to-value; others want the BYOC tier's stronger residency story and are
 willing to run their own deployment for it. Both are sold as distinct
-options. **The BYOC tier (`apps/api`, `infra/bicep`, `app/connect-azure`) is
+options. **The BYOC tier (`apps/api-byoc`, `infra/bicep`, `app/connect-azure`) is
 completely unaffected by this doc — it ships today, unchanged.**
 
 ---
@@ -130,7 +130,7 @@ scale), Postgres Burstable B1ms (~$12–20/mo), Redis Basic C0 (~$15/mo,
 dev-grade/no SLA — upgrade to Standard before depending on uptime), plus
 small Key Vault/registry costs.
 
-See `docs/plan/architecture.md` for the canonical, cross-tier table of what's
+See `docs/architecture.md` for the canonical, cross-tier table of what's
 actually shipped vs. decided-but-not-built per layer — this section is the
 rationale, that doc is the live status.
 
@@ -237,7 +237,7 @@ tenant" pitch does not apply to the SaaS tier, and this doc says so
 directly rather than implying otherwise. What's actually stored is
 connection *metadata*: the customer's Azure tenant ID, consent/role-assignment
 status, and selected subscription IDs — no line-item cost data is persisted
-long-term, matching `apps/api`'s existing "query live, cache short-TTL,
+long-term, matching `apps/api-byoc`'s existing "query live, cache short-TTL,
 don't ingest line items" approach. The Neon project is pinned to an **EU
 region**, keeping at least the metadata consistent with BYOC's EU-residency
 framing, even though the "no central database" claim itself no longer holds
@@ -293,7 +293,7 @@ All endpoints are tenant-scoped — resolved from the caller's Clerk JWT
 | 4 | `GET /connections/:id/subscriptions` | Subscriptions visible once `ACTIVE` |
 | 5 | `POST /connections/:id/subscriptions/select` | Narrow monitoring to specific subscriptions |
 | 6 | `POST /connections/:id/sync` | Trigger a cost-data pull |
-| 7 | `GET /costs/daily`, `/costs/accumulated`, `/costs/by-service`, `/costs/by-resource` | Same shapes as BYOC's `apps/api`, tenant-scoped |
+| 7 | `GET /costs/daily`, `/costs/accumulated`, `/costs/by-service`, `/costs/by-resource` | Same shapes as BYOC's `apps/api-byoc`, tenant-scoped |
 
 Endpoints 2–7 are not yet built.
 
@@ -375,7 +375,7 @@ No secret/credential column — see "Cross-tenant access mechanism" above.
   `neon_superuser`/`BYPASSRLS` — see "What multi-tenant means here" for why
   Neon's default role doesn't work for this.
 - **Cache (Upstash) and Jobs (Trigger.dev) are decided but not built** —
-  see `docs/plan/architecture.md` for current status. No caching or scheduled
+  see `docs/architecture.md` for current status. No caching or scheduled
   sync exists in `apps/api-saas` yet.
 - **Secrets manager for SaaS** is not yet named — "any secrets manager" is
   a placeholder; the App Registration certificate currently lives as a
@@ -384,7 +384,7 @@ No secret/credential column — see "Cross-tenant access mechanism" above.
   certificate — needs to exist before the first real customer connects, not
   after an incident.
 - **Shared cost-query logic** (`cost-management.service.ts`'s date-boundary
-  handling) is currently duplicated between `apps/api` and `apps/api-saas`
+  handling) is currently duplicated between `apps/api-byoc` and `apps/api-saas`
   rather than extracted into `packages/shared`, to avoid any risk to BYOC's
   tested code during the SaaS tier's initial build. Revisit as a separate,
   independently-reviewed change once the SaaS tier is stable.

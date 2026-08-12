@@ -1,12 +1,14 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { AzureSubscription } from "@cloudguard/shared";
+import { useRouter } from "next/navigation";
+import { AzureSubscription } from "@finops-lab/shared";
 import { Button } from "@/components/ui/button";
 
 type Step = "discovering" | "select" | "syncing" | "done" | "error";
 
 export function OnboardingStepper() {
+  const router = useRouter();
   const [step, setStep] = useState<Step>("discovering");
   const [subscriptions, setSubscriptions] = useState<AzureSubscription[]>([]);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
@@ -48,6 +50,7 @@ export function OnboardingStepper() {
       if (!syncResponse.ok) throw new Error("Sync failed to start");
 
       setStep("done");
+      router.push("/dashboard");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Something went wrong");
       setStep("error");

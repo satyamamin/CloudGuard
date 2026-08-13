@@ -60,6 +60,11 @@ module containerApp 'modules/container-app.bicep' = {
     databaseUrl: 'postgresql://${postgresAdminLogin}:${postgresAdminPassword}@${postgres.outputs.fqdn}:5432/finopslab?sslmode=require'
     apiKey: apiKey
     frontendOrigin: frontendOrigin
+    // Forces a fresh Container Apps revision (and therefore a real
+    // restart) on every deploy -- see the comment in container-app.bicep.
+    // Reuses apiKey rather than adding a second newGuid() parameter,
+    // since it already changes every deployment by design.
+    revisionSuffix: take(uniqueString(apiKey), 10)
   }
 }
 

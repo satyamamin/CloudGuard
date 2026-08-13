@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.46.1.21595",
-      "templateHash": "9259811989943314926"
+      "templateHash": "7937190823885903405"
     }
   },
   "parameters": {
@@ -265,6 +265,9 @@
           },
           "frontendOrigin": {
             "value": "[parameters('frontendOrigin')]"
+          },
+          "revisionSuffix": {
+            "value": "[take(uniqueString(parameters('apiKey')), 10)]"
           }
         },
         "template": {
@@ -274,7 +277,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.46.1.21595",
-              "templateHash": "1325322968524871148"
+              "templateHash": "3806244960732844176"
             }
           },
           "parameters": {
@@ -297,6 +300,9 @@
               "type": "securestring"
             },
             "frontendOrigin": {
+              "type": "string"
+            },
+            "revisionSuffix": {
               "type": "string"
             }
           },
@@ -329,6 +335,7 @@
                   ]
                 },
                 "template": {
+                  "revisionSuffix": "[parameters('revisionSuffix')]",
                   "scale": {
                     "minReplicas": 1,
                     "maxReplicas": 1

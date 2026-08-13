@@ -10,7 +10,7 @@ async function requirePairedClient(orgId: string) {
 }
 
 export async function GET() {
-  const { orgId } = auth();
+  const { orgId } = await auth();
   if (!orgId) return NextResponse.json({ error: "No active organization" }, { status: 401 });
 
   const client = await requirePairedClient(orgId);
@@ -20,7 +20,7 @@ export async function GET() {
 }
 
 export async function POST() {
-  const { orgId } = auth();
+  const { orgId } = await auth();
   if (!orgId) return NextResponse.json({ error: "No active organization" }, { status: 401 });
 
   const client = await requirePairedClient(orgId);

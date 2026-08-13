@@ -1,4 +1,4 @@
-import { ClerkProvider, OrganizationSwitcher, SignedIn, UserButton } from "@clerk/nextjs";
+import { ClerkProvider, OrganizationSwitcher, Show, UserButton } from "@clerk/nextjs";
 import type { Metadata } from "next";
 import { PRODUCT_NAME } from "@/lib/product-name";
 import "./globals.css";
@@ -13,12 +13,12 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <ClerkProvider>
       <html lang="en">
         <body className="min-h-screen bg-slate-50 text-slate-900">
-          <SignedIn>
+          <Show when="signed-in">
             <div className="flex justify-end items-center gap-3 p-4">
               <OrganizationSwitcher hidePersonal />
               <UserButton />
             </div>
-          </SignedIn>
+          </Show>
           {children}
         </body>
       </html>

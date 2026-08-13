@@ -179,11 +179,19 @@ a hypothetical future metric where "up" is good.
   `<Tooltip<number, string>>` generic JSX instantiation — it doesn't; the actual
   exported `Tooltip` function is not generic, and that syntax fails to compile
   ("Expected 0 type arguments, but got 2"). The working pattern used throughout
-  `components/dashboard/*-chart.tsx`: use the *unparameterized* default
-  `TooltipContentProps`, and pass `content` as a function
-  (`content={(props) => <ChartTooltip {...props} currency={currency} />}`) rather
-  than a JSX element — Recharts clones tooltip props at runtime in a way a
-  pre-built JSX element can't be statically type-checked against.
+  `components/dashboard/*-chart.tsx`: pass `content` as a function
+  (`content={(props: TooltipContentProps<number, string>) => <ChartTooltip {...props} currency={currency} />}`)
+  rather than a JSX element — Recharts clones tooltip props at runtime in a way
+  a pre-built JSX element can't be statically type-checked against — **and**
+  give `ChartTooltip` itself the matching explicit
+  `TooltipContentProps<number, string> & { currency: string }` prop type, not
+  the unparameterized default. Both sides have to agree: `formatter` is a
+  function-typed prop (contravariant), so spreading a
+  `TooltipContentProps<number, string>` value into a component typed with the
+  wider unparameterized `TooltipContentProps` fails to type-check under the
+  Next.js 16 / TS toolchain this app now runs — an earlier version of this
+  guidance recommended the unparameterized default on both sides, which relied
+  on looser inference that no longer holds.
 - **Route-segment `loading.tsx` gives automatic loading states.** No manual
   `isLoading` flags anywhere in the dashboard — Next.js's App Router shows each
   route's `loading.tsx` skeleton automatically while its Server Component's data

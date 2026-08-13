@@ -11,7 +11,7 @@ interface CostByServiceChartProps {
   currency: string;
 }
 
-function ChartTooltip({ active, payload, currency }: TooltipContentProps & { currency: string }) {
+function ChartTooltip({ active, payload, currency }: TooltipContentProps<number, string> & { currency: string }) {
   if (!active || !payload?.length) return null;
   const point = payload[0]?.payload as ServiceCost | undefined;
   if (!point) return null;
@@ -81,7 +81,7 @@ export function CostByServiceChart({ services, currency }: CostByServiceChartPro
               tick={{ fill: "var(--text-secondary)", fontSize: 12 }}
             />
             <Tooltip
-              content={(props) => <ChartTooltip {...props} currency={currency} />}
+              content={(props: TooltipContentProps<number, string>) => <ChartTooltip {...props} currency={currency} />}
               cursor={{ fill: "var(--gridline)", opacity: 0.4 }}
             />
             <Bar dataKey="cost" fill="var(--series-1)" radius={[0, 4, 4, 0]} maxBarSize={20} />

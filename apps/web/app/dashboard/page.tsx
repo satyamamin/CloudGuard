@@ -7,7 +7,7 @@ import { ErrorState } from "@/components/dashboard/error-state";
 import { formatCurrency } from "@/lib/format";
 
 interface OverviewPageProps {
-  searchParams: { subscriptionId?: string; days?: string };
+  searchParams: Promise<{ subscriptionId?: string; days?: string }>;
 }
 
 // Fetches one double-length daily-costs window (days*2) instead of a
@@ -15,14 +15,15 @@ interface OverviewPageProps {
 // current-vs-prior-period delta AND the data to derive the accumulated hero
 // chart client-side — one Azure call doing the work of two.
 export default async function DashboardOverviewPage({ searchParams }: OverviewPageProps) {
-  const { orgId } = auth();
+  const { orgId } = await auth();
   if (!orgId) return null;
 
   const pairing = await getInstancePairing(orgId);
   if (!pairing) return null;
 
-  const days = searchParams.days ? Number(searchParams.days) : 30;
-  const subscriptionId = searchParams.subscriptionId;
+  const resolvedSearchParams = await searchParams;
+  const days = resolvedSearchParams.days ? Number(resolvedSearchParams.days) : 30;
+  const subscriptionId = resolvedSearchParams.subscriptionId;
   const client = backendClientFor(pairing);
 
   try {

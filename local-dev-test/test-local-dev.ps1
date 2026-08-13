@@ -1,5 +1,5 @@
 # One-shot local dev startup for Connect Azure testing (README.md "Restarting
-# local dev" steps 1-6). Idempotent: safe to re-run — skips anything that's
+# local dev" steps 1-7). Idempotent: safe to re-run — skips anything that's
 # already running instead of spawning duplicate processes/terminals.
 
 $ErrorActionPreference = "Stop"
@@ -157,15 +157,43 @@ if (-not $webAlreadyUp) {
 }
 Write-Host "apps/web ready at $webUrl" -ForegroundColor Green
 
-# Step 5 — sanity-check (reuses the health check from step 3 instead of re-querying if already up)
-Write-Host "`n== Step 5: sanity check ==" -ForegroundColor Cyan
+# Step 5 — Prisma Studio (browse the local Postgres DB). Lightweight enough
+# to leave running alongside the two dev servers above — same idempotent
+# skip-if-already-up pattern as apps/api-byoc/apps/web.
+Write-Host "`n== Step 5: Prisma Studio ==" -ForegroundColor Cyan
+$studioUrl = "http://localhost:5555"
+
+$studioAlreadyUp = $false
+try { Invoke-WebRequest -Uri $studioUrl -UseBasicParsing -TimeoutSec 3 | Out-Null; $studioAlreadyUp = $true } catch {}
+
+if ($studioAlreadyUp) {
+    Write-Host "Prisma Studio already running on port 5555 — skipping."
+} else {
+    # Same reasoning as apps/api-byoc above: cwd must be apps/api-byoc so
+    # Prisma CLI's own .env auto-loading picks up DATABASE_URL — `prisma
+    # studio` (unlike `nest start`) reads .env itself, no manual export
+    # needed here.
+    if ($wtPath) {
+        $studioScriptPath = Join-Path $env:TEMP "cloudguard-dev-studio.ps1"
+        Set-Content -Path $studioScriptPath -Value "Set-Location '$(Join-Path $repoRoot "apps\api-byoc")'`nnpx prisma studio --port 5555" -Encoding UTF8
+        Start-Process $wtPath -ArgumentList "-w", "0", "new-tab", "--title", "prisma-studio", "-d", $repoRoot, "powershell", "-NoExit", "-File", $studioScriptPath
+    } else {
+        Start-Process powershell -ArgumentList "-NoExit", "-Command", "cd '$(Join-Path $repoRoot "apps\api-byoc")'; npx prisma studio --port 5555"
+    }
+    Write-Host "Waiting for Prisma Studio to become ready..."
+    if (-not (Wait-ForHttp $studioUrl $null "Prisma Studio")) { exit 1 }
+}
+Write-Host "Prisma Studio ready at $studioUrl" -ForegroundColor Green
+
+# Step 6 — sanity-check (reuses the health check from step 3 instead of re-querying if already up)
+Write-Host "`n== Step 6: sanity check ==" -ForegroundColor Cyan
 if ($apiAlreadyUp) {
     Write-Host "Already confirmed healthy in step 3 — skipping recheck."
 }
 Write-Host "apps/api-byoc /health -> $($health | ConvertTo-Json -Compress)" -ForegroundColor Green
 
-# Step 6 — open in browser (reuses an already-open Chrome window/tab if one exists)
-Write-Host "`n== Step 6: opening browser ==" -ForegroundColor Cyan
+# Step 7 — open in browser (reuses an already-open Chrome window/tab if one exists)
+Write-Host "`n== Step 7: opening browser ==" -ForegroundColor Cyan
 Start-Process "chrome" "$webUrl/connect-azure"
 
 Write-Host "`nAll set." -ForegroundColor Green

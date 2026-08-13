@@ -10,7 +10,7 @@ import { backendClientFor } from "@/lib/backend-client";
 //   paired but no subscriptions selected yet -> /connect-azure (finish onboarding)
 //   paired and onboarded -> /dashboard
 export default async function HomePage() {
-  const { orgId } = auth();
+  const { orgId } = await auth();
   if (!orgId) {
     redirect("/deploy-azure");
   }

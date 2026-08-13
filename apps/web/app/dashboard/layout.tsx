@@ -10,7 +10,7 @@ import { PeriodSelector } from "@/components/dashboard/period-selector";
 // chrome (nav, subscription/period selectors), same "no round-trip through
 // /api/instance for first paint" reasoning as app/connect-azure/page.tsx.
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
-  const { orgId } = auth();
+  const { orgId } = await auth();
   if (!orgId) redirect("/connect-azure");
 
   const pairing = await getInstancePairing(orgId);

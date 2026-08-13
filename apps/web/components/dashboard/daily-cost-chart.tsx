@@ -11,7 +11,7 @@ interface DailyCostChartProps {
   currency: string;
 }
 
-function ChartTooltip({ active, payload, label, currency }: TooltipContentProps & { currency: string }) {
+function ChartTooltip({ active, payload, label, currency }: TooltipContentProps<number, string> & { currency: string }) {
   if (!active || !payload?.length) return null;
   const value = Number(payload[0]?.value ?? 0);
   return (
@@ -72,7 +72,7 @@ export function DailyCostChart({ days, currency }: DailyCostChartProps) {
               tick={{ fill: "var(--text-muted)", fontSize: 12 }}
               tickFormatter={(v: number) => formatCompactCurrency(v, currency)}
             />
-            <Tooltip content={(props) => <ChartTooltip {...props} currency={currency} />} />
+            <Tooltip content={(props: TooltipContentProps<number, string>) => <ChartTooltip {...props} currency={currency} />} />
             <Area type="monotone" dataKey="cost" stroke="var(--series-1)" strokeWidth={2} fill="var(--series-1)" fillOpacity={0.1} />
           </AreaChart>
         </ResponsiveContainer>

@@ -5,20 +5,21 @@ import { CostByResourceChart } from "@/components/dashboard/cost-by-resource-cha
 import { ErrorState } from "@/components/dashboard/error-state";
 
 interface CostByResourcePageProps {
-  searchParams: { subscriptionId?: string; days?: string };
+  searchParams: Promise<{ subscriptionId?: string; days?: string }>;
 }
 
 export default async function CostByResourcePage({ searchParams }: CostByResourcePageProps) {
-  const { orgId } = auth();
+  const { orgId } = await auth();
   if (!orgId) return null;
 
   const pairing = await getInstancePairing(orgId);
   if (!pairing) return null;
 
   try {
+    const resolvedSearchParams = await searchParams;
     const data = await backendClientFor(pairing).costByResource({
-      subscriptionId: searchParams.subscriptionId,
-      days: searchParams.days ? Number(searchParams.days) : undefined,
+      subscriptionId: resolvedSearchParams.subscriptionId,
+      days: resolvedSearchParams.days ? Number(resolvedSearchParams.days) : undefined,
     });
 
     return (

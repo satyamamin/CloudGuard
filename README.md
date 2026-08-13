@@ -47,7 +47,7 @@ cp apps/web/.env.local.example apps/web/.env.local    # needs Clerk keys — see
 npm run dev -w apps/web                                # http://localhost:3000
 ```
 
-Requires a Clerk application with **Organizations enabled** (Membership required) — see the Clerk setup note in [`CLAUDE.md`](CLAUDE.md) if `auth().orgId` comes back empty for a user with a real org membership.
+Requires a Clerk application with **Organizations enabled** (Membership required) — see [`docs/byoc/clerk.md`](docs/byoc/clerk.md) for full setup steps, or the Clerk setup note in [`CLAUDE.md`](CLAUDE.md) if `(await auth()).orgId` comes back empty for a user with a real org membership.
 
 ### `infra/bicep`
 
@@ -83,19 +83,25 @@ One-time setup (`npm install`, `.env` files, Prisma migrate) only needs to happe
    ```
    Wait for `Ready in ...` from Next.js.
 
-5. **Sanity-check the backend before opening the browser**:
+5. **Start Prisma Studio** (separate new terminal, leave running) if you want to browse the local Postgres DB directly:
+   ```bash
+   cd apps/api-byoc && npx prisma studio --port 5555
+   ```
+   Opens at `http://localhost:5555`. Lightweight — fine to leave running alongside the two dev servers above.
+
+6. **Sanity-check the backend before opening the browser**:
    ```bash
    curl -H "Authorization: Bearer <your-API_KEY>" http://localhost:3001/health
    ```
    Should return `{"status":"ok",...}`. If `/health` works but `/subscriptions` or `/sync` later fail with a 500, it's almost always the Azure CLI token again (step 1).
 
-6. Open the browser to `http://localhost:3000/connect-azure` and complete pairing + subscription select + sync. Once synced, cost data is viewable at `http://localhost:3000/dashboard`.
+7. Open the browser to `http://localhost:3000/connect-azure` and complete pairing + subscription select + sync. Once synced, cost data is viewable at `http://localhost:3000/dashboard`.
 
-Steps 1–6 above are automated by a single script:
+Steps 1–7 above are automated by a single script:
 ```powershell
 .\local-dev-test\test-local-dev.ps1
 ```
-Idempotent — skips Docker/`apps/api-byoc`/`apps/web` if already running instead of starting duplicates, and reuses an already-open Chrome window rather than spawning a new one.
+Idempotent — skips Docker/`apps/api-byoc`/`apps/web`/Prisma Studio if already running instead of starting duplicates, and reuses an already-open Chrome window rather than spawning a new one.
 
 ## Commands
 

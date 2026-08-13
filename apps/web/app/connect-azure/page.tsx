@@ -10,7 +10,7 @@ import { OnboardingWizard } from "./onboarding-wizard";
 // round-trip through the /api/instance route for the initial render — that
 // route exists for client-side mutations/refetches, this is the first paint).
 export default async function ConnectAzurePage() {
-  const { orgId } = auth();
+  const { orgId } = await auth();
   const pairing = orgId ? await getMaskedInstancePairing(orgId) : null;
 
   return (

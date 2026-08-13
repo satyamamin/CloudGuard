@@ -18,7 +18,7 @@ in the Portal blade — `rg-<name>` in the examples below, using the
 | 3 | `Microsoft.DBforPostgreSQL/flexibleServers` | `finops-lab-pg-<hash>` (hash from `uniqueString(resourceGroup().id)`, not knowable before deploy) | Burstable `Standard_B1ms`, Postgres 16, 32GB storage, 7-day backup retention, no geo-redundancy, high availability disabled, admin login `finopslab`, admin password auto-generated |
 | 4 | `Microsoft.DBforPostgreSQL/flexibleServers/firewallRules` | `AllowAllAzureServicesAndResourcesWithinAzureIps` | `0.0.0.0`–`0.0.0.0` — Azure's special-case range meaning "any Azure-internal service," not the literal internet |
 | 5 | `Microsoft.DBforPostgreSQL/flexibleServers/databases` | `finopslab` | The actual database inside resource #3 |
-| 6 | `Microsoft.App/containerApps` | `finops-lab-api` | System-assigned Managed Identity; external ingress on port 3001; pinned `minReplicas=maxReplicas=1` (see `CLAUDE.md`'s note on why — the in-memory sync lock and migration-on-boot strategy only hold for a single replica); one container `api` running `containerImage` (default `ghcr.io/satyamamin/finops-lab-api:latest`); env vars `DATABASE_URL`/`API_KEY` (from Container App secrets), `AZURE_AUTH_MODE=managed-identity`, `FRONTEND_ORIGIN`, `PORT=3001` |
+| 6 | `Microsoft.App/containerApps` | `finops-lab-api` | System-assigned Managed Identity; external ingress on port 3001; pinned `minReplicas=maxReplicas=1` (see `CLAUDE.md`'s note on why — the in-memory sync lock and migration-on-boot strategy only hold for a single replica); one container `api` running `containerImage` (default `ghcr.io/satyamamin/finops-lab-api:latest`); env vars `DATABASE_URL`/`API_KEY` (from Container App secrets), `AZURE_AUTH_MODE=managed-identity`, `FRONTEND_ORIGIN`, `PORT=3001`; `revisionSuffix` deterministically derived from `apiKey` via `uniqueString()` — forces a genuinely new revision (and real container restart) on every redeploy, since Container Apps otherwise has no reason to restart when only a secret's *value* changes (see "Redeploying" below) |
 
 ## Subscription-scoped resources
 
@@ -39,6 +39,62 @@ partway through without it.
 Subscription-wide (not resource-group-scoped) because Cost Management data
 is queried at the subscription level, not per-resource-group.
 
+## Finding the Managed Identity in the Portal
+
+A system-assigned Managed Identity isn't its own standalone resource you'd
+find sitting in a resource group — it's created and destroyed automatically
+alongside its parent (resource #6, the `finops-lab-api` Container App).
+But Azure AD (Entra ID) does create a real Service Principal object to
+represent it in the directory, which is what shows up under
+**Entra ID → Enterprise Applications** (filter by **Application type =
+Managed Identities** to see only these, not regular app registrations).
+
+"Scope" means two different things here, worth not conflating:
+
+1. **The identity object itself** isn't scoped to a resource group or
+   subscription at all — it's a tenant-wide Azure AD object. What ties it
+   to a specific place is which resource owns it: this one belongs to
+   `rg-finops-lab-dev` → `finops-lab-api`.
+2. **What it's allowed to do** — its role assignments (7a/7b above) — *is*
+   genuinely scoped, and that's the whole subscription, not the resource
+   group, per the reasoning above.
+
+Fastest way to see both at once in the Portal, without going through
+Enterprise Applications separately: open the Container App itself → left
+sidebar **Identity** → **System assigned** tab. It shows the Object ID and
+has an **"Azure role assignments"** button that lists every role this
+specific identity holds across every scope in one place.
+
+## Monitoring additional subscriptions
+
+By default the Managed Identity only has Reader + Cost Management Reader on
+the **one** subscription chosen during deployment (7a/7b above) — that's
+why `GET /subscriptions` (and the "Choose which subscriptions to monitor"
+step on `/connect-azure`) only ever lists one subscription right after a
+fresh deployment, not a bug.
+
+To see cost data for more subscriptions later, the customer manually grants
+the **same** Managed Identity (found via the steps above) Reader + Cost
+Management Reader on each additional subscription — Portal: subscription →
+**Access control (IAM)** → **Add role assignment** → search for
+`finops-lab-api` by name; or CLI:
+
+```
+az role assignment create --assignee <principalId> --role Reader --scope /subscriptions/<subId>
+az role assignment create --assignee <principalId> --role "Cost Management Reader" --scope /subscriptions/<subId>
+```
+
+To cover many subscriptions at once instead of one at a time, the same two
+roles can be assigned once at a **Management Group** scope — cascades to
+every subscription under it, including ones added later. Note this needs
+the customer to already have (or their Global Admin to grant via Azure AD's
+one-time "Elevate access") permission at that Management Group scope,
+which most subscription-level Owners won't have by default.
+
+Either way, no redeploy and no app change is needed — the next visit to
+`/connect-azure`'s subscription step just reflects whatever the identity
+can currently see.
+
 ## Deployment outputs (not resources)
 
 | Output | Value | Used for |
@@ -50,6 +106,34 @@ Known gap (see `infra/bicep/README.md`): these outputs are not actually
 ephemeral — they remain visible in the resource group's Deployment history
 to anyone with read access, despite `docs/byoc/connect-azure.md`'s "shown
 once" framing. Accepted for v1 trial scope.
+
+`apiKey`'s output is deliberately **not** `@secure()`, even though the
+parameter feeding it is — found the hard way on the first real deployment.
+Azure Resource Manager never returns secure output *values* through any
+channel (Portal, CLI, or the raw REST API) to anyone, ever, even the
+legitimate customer with full read access — marking the output secure made
+it permanently unretrievable, defeating its entire purpose. Dropping
+`@secure()` from just the output (not the parameter) makes the value
+genuinely retrievable while it still doesn't appear in deployment
+input/activity logs. This is exactly the tradeoff the paragraph above
+already describes — the `@secure()` output was accidentally *stricter*
+than that documented, accepted behavior, not matching it.
+
+## Redeploying
+
+Bicep/ARM deployments are idempotent — redeploying against the same
+resource group updates resources in place rather than duplicating them.
+One gotcha specific to this template: Container Apps treats secret
+*values* as application-scope, not revision-scope. Env vars resolve a
+`secretRef` once at container boot; updating a secret's value in the
+control plane does **not** restart the running container to re-read it.
+Since nothing else changes on a routine redeploy (same image tag, same env
+var names), Container Apps would otherwise have no reason to ever create a
+new revision — every redeploy would be silently a no-op on the actually-
+running container, serving stale secrets (a freshly-rotated `apiKey`
+included) indefinitely. `revisionSuffix` (resource #6 above) exists
+specifically to force a real restart on every deploy, regardless of
+whether anything revision-scope actually changed.
 
 ## `apiKey` vs. `postgresAdminPassword` — two separate secrets, don't confuse them
 

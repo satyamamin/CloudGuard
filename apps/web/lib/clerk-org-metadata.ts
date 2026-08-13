@@ -14,7 +14,8 @@ interface PrivateMetadata {
 }
 
 export async function getInstancePairing(orgId: string): Promise<InstancePairing | null> {
-  const org = await clerkClient().organizations.getOrganization({ organizationId: orgId });
+  const client = await clerkClient();
+  const org = await client.organizations.getOrganization({ organizationId: orgId });
   const metadata = org.privateMetadata as PrivateMetadata;
   const parsed = instancePairingSchema.safeParse(metadata.instancePairing);
   return parsed.success ? parsed.data : null;
@@ -27,7 +28,8 @@ export async function getMaskedInstancePairing(orgId: string): Promise<MaskedIns
 }
 
 export async function setInstancePairing(orgId: string, pairing: InstancePairing): Promise<void> {
-  await clerkClient().organizations.updateOrganizationMetadata(orgId, {
+  const client = await clerkClient();
+  await client.organizations.updateOrganizationMetadata(orgId, {
     privateMetadata: { instancePairing: pairing } satisfies PrivateMetadata,
   });
 }

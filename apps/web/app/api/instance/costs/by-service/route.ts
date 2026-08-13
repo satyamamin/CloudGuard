@@ -4,7 +4,7 @@ import { getInstancePairing } from "@/lib/clerk-org-metadata";
 import { backendClientFor } from "@/lib/backend-client";
 
 export async function GET(request: NextRequest) {
-  const { orgId } = auth();
+  const { orgId } = await auth();
   if (!orgId) return NextResponse.json({ error: "No active organization" }, { status: 401 });
 
   const pairing = await getInstancePairing(orgId);

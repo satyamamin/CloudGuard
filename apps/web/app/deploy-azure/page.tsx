@@ -9,7 +9,7 @@ import { backendClientFor } from "@/lib/backend-client";
 
 // Standalone deploy step, split out from /connect-azure so the Deploy-to-
 // Azure link has a quick, bookmarkable entry point that doesn't require
-// being signed in first (this route isn't in middleware.ts's protected
+// being signed in first (this route isn't in proxy.ts's protected
 // matcher). Pairing still happens on /connect-azure after the deployment
 // finishes and outputs a Backend URL + API key.
 export default async function DeployAzurePage() {
@@ -17,7 +17,7 @@ export default async function DeployAzurePage() {
   // job is done — send them to the dashboard instead of the deploy screen.
   // Same must-not-be-inside-try-catch caveat as app/page.tsx: redirect()
   // throws internally.
-  const { orgId } = auth();
+  const { orgId } = await auth();
   if (orgId) {
     const pairing = await getInstancePairing(orgId);
     if (pairing) {
@@ -37,8 +37,9 @@ export default async function DeployAzurePage() {
   // Computed from the incoming request rather than hardcoded, so the
   // frontendOrigin reminder below stays correct whether this is running on
   // localhost during dev or the eventual production domain — no edit
-  // needed when apps/web moves to Vercel.
-  const host = headers().get("host") ?? "localhost:3000";
+  // needed when apps/web moves to Vercel. headers() is async as of
+  // Next.js 15+ (sync access fully removed in 16).
+  const host = (await headers()).get("host") ?? "localhost:3000";
   const protocol = host.startsWith("localhost") || host.startsWith("127.0.0.1") ? "http" : "https";
   const origin = `${protocol}://${host}`;
 

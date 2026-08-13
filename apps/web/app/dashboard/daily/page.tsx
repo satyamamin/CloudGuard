@@ -5,20 +5,21 @@ import { DailyCostChart } from "@/components/dashboard/daily-cost-chart";
 import { ErrorState } from "@/components/dashboard/error-state";
 
 interface DailyCostsPageProps {
-  searchParams: { subscriptionId?: string; days?: string };
+  searchParams: Promise<{ subscriptionId?: string; days?: string }>;
 }
 
 export default async function DailyCostsPage({ searchParams }: DailyCostsPageProps) {
-  const { orgId } = auth();
-  if (!orgId) return null; // middleware already redirects unauthenticated requests
+  const { orgId } = await auth();
+  if (!orgId) return null; // proxy already redirects unauthenticated requests
 
   const pairing = await getInstancePairing(orgId);
-  if (!pairing) return null; // middleware/layout already redirect unpaired orgs
+  if (!pairing) return null; // proxy/layout already redirect unpaired orgs
 
   try {
+    const resolvedSearchParams = await searchParams;
     const data = await backendClientFor(pairing).dailyCosts({
-      subscriptionId: searchParams.subscriptionId,
-      days: searchParams.days ? Number(searchParams.days) : undefined,
+      subscriptionId: resolvedSearchParams.subscriptionId,
+      days: resolvedSearchParams.days ? Number(resolvedSearchParams.days) : undefined,
     });
 
     return (

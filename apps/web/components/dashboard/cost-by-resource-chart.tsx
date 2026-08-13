@@ -13,7 +13,7 @@ interface CostByResourceChartProps {
 
 const TOP_N = 10;
 
-function ChartTooltip({ active, payload, currency }: TooltipContentProps & { currency: string }) {
+function ChartTooltip({ active, payload, currency }: TooltipContentProps<number, string> & { currency: string }) {
   if (!active || !payload?.length) return null;
   const point = payload[0]?.payload as ResourceCost | undefined;
   if (!point) return null;
@@ -60,7 +60,7 @@ export function CostByResourceChart({ resources, currency }: CostByResourceChart
             tick={{ fill: "var(--text-secondary)", fontSize: 12 }}
           />
           <Tooltip
-            content={(props) => <ChartTooltip {...props} currency={currency} />}
+            content={(props: TooltipContentProps<number, string>) => <ChartTooltip {...props} currency={currency} />}
             cursor={{ fill: "var(--gridline)", opacity: 0.4 }}
           />
           <Bar dataKey="cost" fill="var(--series-1)" radius={[0, 4, 4, 0]} maxBarSize={20} />

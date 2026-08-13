@@ -76,5 +76,12 @@ module roleAssignments 'modules/role-assignments.bicep' = {
 @description('Deployment output: paste into FinOps Lab\'s frontend along with the API key to pair.')
 output backendUrl string = 'https://${containerApp.outputs.fqdn}'
 
-@secure()
+// Deliberately NOT @secure() -- Azure Resource Manager never returns secure
+// output *values* through any channel (Portal, CLI, or the raw REST API),
+// to anyone, ever, even with full read access. Marking this secure made it
+// permanently unretrievable, which defeats its entire purpose: the customer
+// is supposed to copy this value for pairing. The known tradeoff is exactly
+// what infra/bicep/README.md's "known v1 gap" already documents -- it stays
+// visible in this resource group's Deployment history to anyone with read
+// access. postgresAdminPassword has no such output and stays truly hidden.
 output apiKey string = apiKey

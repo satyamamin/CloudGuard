@@ -1,12 +1,11 @@
 {
   "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
-  "languageVersion": "2.0",
   "contentVersion": "1.0.0.0",
   "metadata": {
     "_generator": {
       "name": "bicep",
       "version": "0.46.1.21595",
-      "templateHash": "2121574947429973915"
+      "templateHash": "9259811989943314926"
     }
   },
   "parameters": {
@@ -56,8 +55,8 @@
     "containerAppEnvName": "[format('{0}-env', parameters('environmentName'))]",
     "containerAppName": "[format('{0}-api', parameters('environmentName'))]"
   },
-  "resources": {
-    "containerAppsEnv": {
+  "resources": [
+    {
       "type": "Microsoft.Resources/deployments",
       "apiVersion": "2025-04-01",
       "name": "containerAppsEnv",
@@ -133,7 +132,7 @@
         }
       }
     },
-    "postgres": {
+    {
       "type": "Microsoft.Resources/deployments",
       "apiVersion": "2025-04-01",
       "name": "postgres",
@@ -236,7 +235,7 @@
         }
       }
     },
-    "containerApp": {
+    {
       "type": "Microsoft.Resources/deployments",
       "apiVersion": "2025-04-01",
       "name": "containerApp",
@@ -253,13 +252,13 @@
             "value": "[parameters('location')]"
           },
           "environmentId": {
-            "value": "[reference('containerAppsEnv').outputs.id.value]"
+            "value": "[reference(resourceId('Microsoft.Resources/deployments', 'containerAppsEnv'), '2025-04-01').outputs.id.value]"
           },
           "containerImage": {
             "value": "[parameters('containerImage')]"
           },
           "databaseUrl": {
-            "value": "[format('postgresql://{0}:{1}@{2}:5432/finopslab?sslmode=require', variables('postgresAdminLogin'), parameters('postgresAdminPassword'), reference('postgres').outputs.fqdn.value)]"
+            "value": "[format('postgresql://{0}:{1}@{2}:5432/finopslab?sslmode=require', variables('postgresAdminLogin'), parameters('postgresAdminPassword'), reference(resourceId('Microsoft.Resources/deployments', 'postgres'), '2025-04-01').outputs.fqdn.value)]"
           },
           "apiKey": {
             "value": "[parameters('apiKey')]"
@@ -379,11 +378,11 @@
         }
       },
       "dependsOn": [
-        "containerAppsEnv",
-        "postgres"
+        "[resourceId('Microsoft.Resources/deployments', 'containerAppsEnv')]",
+        "[resourceId('Microsoft.Resources/deployments', 'postgres')]"
       ]
     },
-    "roleAssignments": {
+    {
       "type": "Microsoft.Resources/deployments",
       "apiVersion": "2025-04-01",
       "name": "roleAssignments",
@@ -396,7 +395,7 @@
         "mode": "Incremental",
         "parameters": {
           "principalId": {
-            "value": "[reference('containerApp').outputs.principalId.value]"
+            "value": "[reference(resourceId('Microsoft.Resources/deployments', 'containerApp'), '2025-04-01').outputs.principalId.value]"
           }
         },
         "template": {
@@ -443,20 +442,20 @@
         }
       },
       "dependsOn": [
-        "containerApp"
+        "[resourceId('Microsoft.Resources/deployments', 'containerApp')]"
       ]
     }
-  },
+  ],
   "outputs": {
     "backendUrl": {
       "type": "string",
       "metadata": {
         "description": "Deployment output: paste into FinOps Lab's frontend along with the API key to pair."
       },
-      "value": "[format('https://{0}', reference('containerApp').outputs.fqdn.value)]"
+      "value": "[format('https://{0}', reference(resourceId('Microsoft.Resources/deployments', 'containerApp'), '2025-04-01').outputs.fqdn.value)]"
     },
     "apiKey": {
-      "type": "securestring",
+      "type": "string",
       "value": "[parameters('apiKey')]"
     }
   }

@@ -1,6 +1,6 @@
 "use client";
 
-import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, TooltipContentProps, XAxis, YAxis } from "recharts";
+import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { AccumulatedCost } from "@finops-lab/shared";
 import { formatCompactCurrency, formatCurrency, formatDateLabel } from "@/lib/format";
 import { EmptyState } from "./empty-state";
@@ -10,12 +10,15 @@ interface AccumulatedCostChartProps {
   currency: string;
 }
 
-function ChartTooltip({ active, payload, label, currency }: TooltipContentProps<number, string> & { currency: string }) {
-  if (!active || !payload?.length) return null;
-  const value = Number(payload[0]?.value ?? 0);
+// Recharts' own Tooltip content-prop typing doesn't play well with this
+// toolchain (see CLAUDE.md) -- ChartTooltipBody takes plain, already-coerced
+// values instead of recharts' own prop types, so there's no cross-type
+// boundary for TypeScript to fight with. The <Tooltip content={...}> callback
+// below is left with an inferred (untyped) parameter for the same reason.
+function ChartTooltipBody({ label, value, currency }: { label: string; value: number; currency: string }) {
   return (
     <div className="rounded-md border border-[var(--border)] bg-[var(--chart-surface)] px-3 py-2 shadow-sm">
-      <p className="text-xs text-[var(--text-secondary)]">{formatDateLabel(String(label))}</p>
+      <p className="text-xs text-[var(--text-secondary)]">{formatDateLabel(label)}</p>
       <p className="text-sm font-semibold text-[var(--text-primary)]">{formatCurrency(value, currency)}</p>
     </div>
   );
@@ -41,7 +44,17 @@ export function AccumulatedCostChart({ days, currency }: AccumulatedCostChartPro
           tick={{ fill: "var(--text-muted)", fontSize: 12 }}
           tickFormatter={(v: number) => formatCompactCurrency(v, currency)}
         />
-        <Tooltip content={(props: TooltipContentProps<number, string>) => <ChartTooltip {...props} currency={currency} />} />
+        <Tooltip
+          content={(props) =>
+            props.active && props.payload?.length ? (
+              <ChartTooltipBody
+                label={String(props.label)}
+                value={Number(props.payload[0]?.value ?? 0)}
+                currency={currency}
+              />
+            ) : null
+          }
+        />
         <Area
           type="monotone"
           dataKey="cumulativeCost"

@@ -1,6 +1,4 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
 
 /* Dashboard design tokens — from the dataviz skill's validated reference
    palette (references/palette.md). Scoped to .dashboard-root so the existing

@@ -139,7 +139,7 @@ container boot.
    az bicep build --file infra/bicep/main.bicep --outfile infra/bicep/main.json
    ```
 2. Push to `main` — the Deploy-to-Azure button and raw-URL validation both
-   read from `github.com/satyamamin/FinOps Lab@main`.
+   read from `github.com/satyamamin/CloudGuard@main`.
 3. Structural validation (cheap, no resources created):
    ```
    az deployment group validate --resource-group <test-rg> --template-file infra/bicep/main.json

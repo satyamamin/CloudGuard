@@ -1,0 +1,52 @@
+version: 2
+updates:
+  # Four separate entries, one per package.json in the npm workspace --
+  # Dependabot resolves each against the single root package-lock.json.
+  # Patch/minor bumps are grouped into one PR to cut noise; majors are left
+  # ungrouped so each gets its own PR and its own deliberate review (see
+  # docs/architecture.md's "Keeping the stack current" for why majors here
+  # aren't routine bumps).
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    groups:
+      minor-and-patch:
+        update-types: ["minor", "patch"]
+
+  - package-ecosystem: "npm"
+    directory: "/apps/web"
+    schedule:
+      interval: "weekly"
+    groups:
+      minor-and-patch:
+        update-types: ["minor", "patch"]
+
+  - package-ecosystem: "npm"
+    directory: "/apps/api-byoc"
+    schedule:
+      interval: "weekly"
+    groups:
+      minor-and-patch:
+        update-types: ["minor", "patch"]
+
+  - package-ecosystem: "npm"
+    directory: "/packages/shared"
+    schedule:
+      interval: "weekly"
+    groups:
+      minor-and-patch:
+        update-types: ["minor", "patch"]
+
+  # apps/api-byoc/Dockerfile's node:20-alpine base image.
+  - package-ecosystem: "docker"
+    directory: "/apps/api-byoc"
+    schedule:
+      interval: "weekly"
+
+  # Action version pins in .github/workflows/*.yml (actions/checkout,
+  # docker/login-action, docker/metadata-action, docker/build-push-action).
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"

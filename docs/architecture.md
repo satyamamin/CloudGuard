@@ -125,6 +125,81 @@ endpoints built yet for the question to apply to.
 
 ---
 
+## Keeping the stack current
+
+`scripts/check-stack-versions.mjs` (run via `npm run check-versions` from the
+repo root) is the single script that answers "what's pinned, and what's
+newer" across the whole monorepo:
+
+- Every npm dependency in `package.json`, `apps/web/package.json`,
+  `apps/api-byoc/package.json`, and `packages/shared/package.json` — via
+  `npm outdated --workspaces --json` (current / npm-install-safe "wanted" /
+  absolute "latest" per package).
+- The handful of non-npm pins: local Node.js version vs. current LTS, the
+  `node:20-alpine` / `postgres:16-alpine` Docker base images (checked
+  against Docker Hub's published `<major>-alpine` tags) vs. the pinned
+  majors in `apps/api-byoc/Dockerfile` / `docker-compose.dev.yml` (the same
+  `16` also drives the deployed Postgres Flexible Server version in
+  `infra/bicep/modules/postgres.bicep`), and the `az bicep` CLI release
+  vs. whatever `az bicep version` reports locally.
+
+Each check is independently try/catched, so one failed network call (GitHub,
+npm registry, Docker Hub) doesn't blank out the rest of the report.
+
+**Snapshot from the last run (2026-08-14 — re-run the script rather than
+trust this table; it goes stale immediately):**
+
+Most of the majors flagged in the previous snapshot (2026-08-13) got their
+own scoped upgrade passes since then — NestJS 10→11, Prisma 5→7, Tailwind
+3→4, Zod 3→4, and TypeScript 5→6 all shipped (each with real breaking
+changes, documented in `CLAUDE.md`). What's left:
+
+| Package | Current | Latest | Notes |
+|---|---|---|---|
+| `@azure/arm-subscriptions` | 5.1.1 | 6.0.0 | **blocked, not just deferred** — confirmed by inspecting the actual published `.d.ts` files for both 6.0.0 and the 7.0.0-beta.1 preview: the "list all subscriptions" operation this app's `/subscriptions` endpoint depends on has been removed from the SDK entirely in both. Do not attempt this bump until upstream restores it |
+| `typescript` | 6.0.3 | 7.0.2 | **blocked, not just deferred** — NestJS's own CLI refuses to run under 7.0 ("the compiler API... is expected to return in 7.1"); 6.0.3 is the real current ceiling for this stack |
+| `@types/node` | 20.19.43 | 26.2.0 | major — stay on the `20.x` line matching `node:20-alpine` until that image bumps too |
+| `@types/express` | 4.17.25 | 5.0.6 | major, tracks Express major (not itself a dependency here) |
+| `eslint` | 9.39.5 | 10.8.1 | **also currently blocked**, discovered while fixing the lint pipeline post-Next.js-16: `eslint@10.8.1` crashes against the current `eslint-plugin-react@7.37.5` (latest published) and separately inside ESLint's own internals — both stem from removed ESLint 9+ APIs the plugin ecosystem hasn't fully caught up with yet |
+| Node.js (local) | v24.14.0 | v24.19.0 (LTS) | patch |
+| `node:20-alpine` (Dockerfile) | 20 | 26 published | major — deliberately behind; bump alongside `@types/node` above |
+| `postgres:16-alpine` / Flexible Server | 16 | 18 published | major — Postgres major bumps need a migration plan, not a routine Docker tag bump |
+| `az bicep` CLI | (local, run `az bicep version`) | v0.46.1 | — |
+
+Reading this: **"wanted" bumps are always safe** (`npm install` already
+picks them up within a package's declared semver range). **"latest" major
+bumps are not routine** — they deserve their own scoped pass with a
+changelog read and a test run, the same way the Next.js 14→16 + Clerk v7
+upgrade got its own dedicated pass rather than a drive-by dependency bump.
+And as this round showed, **not every "latest" is actually reachable** —
+three rows above are confirmed upstream blockers, not just "haven't gotten
+to it yet." Re-check those specifically (not just re-run the script) before
+assuming they're still blocked; the blocker is a point-in-time fact about
+the currently-published versions, not a permanent one.
+
+**Finding out about new releases without running the script.** A few options
+beyond periodically re-running `npm run check-versions`:
+
+- **GitHub "Watch → Custom → Releases"** on this repo's key upstream
+  dependencies (`vercel/next.js`, `clerk/javascript`, `prisma/prisma`,
+  `nestjs/nest`) sends a notification the moment a new stable tag ships —
+  the most direct signal, no polling needed.
+- **Dependabot** (free, native to GitHub, config lives in
+  `.github/dependabot.yml` — not present in this repo yet) opens a PR
+  automatically whenever a dependency has a newer version, on whatever
+  schedule you set (e.g. weekly). Lower effort than Renovate to adopt, less
+  configurable about grouping/scheduling.
+- **Renovate** (also free for public/most private repos via the GitHub
+  App) does the same job with finer control — e.g. grouping all `@nestjs/*`
+  packages into one PR instead of five, or auto-merging patch bumps while
+  leaving majors for review. Better fit once the "batch of individually
+  low-risk patch bumps" noise from Dependabot gets annoying.
+- Either of the above is a stronger fit than this script for *staying*
+  current day-to-day; the script is better suited to an occasional, deliberate
+  "how far behind are we across the whole stack" check-in (like this one),
+  since it reports everything in one pass instead of trickling in as
+  separate PRs.
+
 ## Open items
 
 - **Cache and Jobs are decided but unbuilt on both tiers** — until Redis and

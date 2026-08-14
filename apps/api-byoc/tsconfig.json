@@ -1,7 +1,6 @@
 {
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
-    "module": "commonjs",
     "target": "ES2022",
     "outDir": "dist",
     "emitDecoratorMetadata": true,
@@ -11,6 +10,8 @@
     "noImplicitAny": true,
     "sourceMap": true,
     "incremental": true,
-    "baseUrl": "."
-  }
+    "tsBuildInfoFile": "dist/tsconfig.build.tsbuildinfo",
+    "rootDir": "src"
+  },
+  "exclude": ["node_modules", "dist", "test", "prisma.config.ts"]
 }

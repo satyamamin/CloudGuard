@@ -1,5 +1,5 @@
 import { Injectable } from "@nestjs/common";
-import { Instance } from "@prisma/client";
+import { InstanceModel as Instance } from "../generated/prisma/models";
 import { PrismaService } from "../prisma/prisma.service";
 
 // There is exactly one Instance row per deployment (see docs/byoc/connect-azure.md

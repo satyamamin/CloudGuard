@@ -14,7 +14,7 @@ param environmentName string = 'finops-lab'
 @description('Region for all resources. Restrict to EU regions in the portal UI to match the GDPR/data-residency pitch.')
 param location string = resourceGroup().location
 
-@description('Container image for the backend API. Defaults to the public GHCR image built from apps/api-byoc/Dockerfile.')
+@description('Container image for the backend API. Defaults to :latest (the most recent main-branch build — a moving target, not necessarily smoke-tested). .github/workflows/build-api-image.yml also tags a stable, immutable image on every vX.Y.Z release tag (e.g. ghcr.io/satyamamin/finops-lab-api:1.2.0) — override this parameter to pin to one of those for a customer deployment that should not silently change underneath you, and to have a known-good version to redeploy back to if an upgrade misbehaves.')
 param containerImage string = 'ghcr.io/satyamamin/finops-lab-api:latest'
 
 @description('Origin of the FinOps Lab frontend allowed to call this backend (CORS).')

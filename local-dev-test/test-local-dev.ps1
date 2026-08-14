@@ -17,7 +17,7 @@ function Read-DotEnv($path) {
     return $vars
 }
 
-function Wait-ForHttp($url, $headers, $label, $timeoutSec = 60) {
+function Wait-ForHttp($url, $headers, $label, $timeoutSec = 60, [switch]$Silent) {
     $elapsed = 0
     while ($elapsed -lt $timeoutSec) {
         try {
@@ -29,7 +29,7 @@ function Wait-ForHttp($url, $headers, $label, $timeoutSec = 60) {
             $elapsed += 2
         }
     }
-    Write-Error "$label did not become ready within ${timeoutSec}s."
+    if (-not $Silent) { Write-Error "$label did not become ready within ${timeoutSec}s." }
     return $false
 }
 
@@ -96,6 +96,19 @@ if ($webAlreadyUp) {
 
 $wtPath = (Get-Command wt.exe -ErrorAction SilentlyContinue).Source
 
+# Launch apps/web's tab before waiting on apps/api-byoc below, so the two
+# boot concurrently — apps/web doesn't depend on apps/api-byoc being up yet,
+# only on it being up by the time someone actually opens the browser (Step 7).
+if (-not $webAlreadyUp) {
+    if ($wtPath) {
+        $webScriptPath = Join-Path $env:TEMP "cloudguard-dev-web.ps1"
+        Set-Content -Path $webScriptPath -Value "Set-Location '$repoRoot'`nnpm run dev:web" -Encoding UTF8
+        Start-Process $wtPath -ArgumentList "-w", "0", "new-tab", "--title", "apps-web", "-d", $repoRoot, "powershell", "-NoExit", "-File", $webScriptPath
+    } else {
+        Start-Process powershell -ArgumentList "-NoExit", "-Command", "cd '$repoRoot'; npm run dev:web"
+    }
+}
+
 if (-not $apiAlreadyUp) {
     # apps/api-byoc has no dotenv loading of its own (see apps/api-byoc/src/main.ts) —
     # `nest start` does not read .env files automatically. Without this, the
@@ -107,6 +120,24 @@ if (-not $apiAlreadyUp) {
         $value = $_.Value -replace "'", "''"
         "`$env:$($_.Key) = '$value'"
     }) -join "`n"
+    # `nest start --watch` used to crash right after startup with "Cannot
+    # find module '.../dist/main'" (or a MODULE_NOT_FOUND deep in a require
+    # chain), intermittently, in a way that resisted root-causing for a long
+    # time (retry loops, settling delays, an SWC builder swap -- all tried,
+    # none of it the real fix). The actual cause: `apps/api-byoc/tsconfig.json`
+    # had `incremental: true` writing its build-info cache
+    # (`tsconfig.build.tsbuildinfo`) to the app root -- *outside* `dist/` --
+    # while nest-cli.json's `deleteOutDir: true` only clears `dist/` itself.
+    # So the cache could survive a `dist/` wipe: tsc would read the stale
+    # cache, conclude nothing needed recompiling, report "0 errors", and
+    # skip re-emitting entirely, leaving `dist/` empty while claiming
+    # success. Fixed at the config level -- `tsconfig.json` now sets
+    # `"tsBuildInfoFile": "dist/tsconfig.build.tsbuildinfo"`, so the cache
+    # lives inside `dist/` and gets wiped in lockstep with it, every time,
+    # for every invocation (this script, direct `npm run build`,
+    # `nest start --watch`, anything). Verified with a real stress test (6/6
+    # clean starts) after the fix, versus a consistently reproducible
+    # failure before it.
     $apiCommand = "$envSetters`nSet-Location '$repoRoot'`nnpm run dev:api"
 
     if ($wtPath) {
@@ -132,21 +163,14 @@ if (-not $apiAlreadyUp) {
         $apiCommandInline = ($apiCommand -split "`n") -join "; "
         Start-Process powershell -ArgumentList "-NoExit", "-Command", $apiCommandInline
     }
-}
 
-if (-not $webAlreadyUp) {
-    if ($wtPath) {
-        $webScriptPath = Join-Path $env:TEMP "cloudguard-dev-web.ps1"
-        Set-Content -Path $webScriptPath -Value "Set-Location '$repoRoot'`nnpm run dev:web" -Encoding UTF8
-        Start-Process $wtPath -ArgumentList "-w", "0", "new-tab", "--title", "apps-web", "-d", $repoRoot, "powershell", "-NoExit", "-File", $webScriptPath
-    } else {
-        Start-Process powershell -ArgumentList "-NoExit", "-Command", "cd '$repoRoot'; npm run dev:web"
-    }
+    Write-Host "Waiting for apps/api-byoc to become healthy..."
+    if (-not (Wait-ForHttp $apiHealthUrl $apiHeaders "apps/api-byoc")) { exit 1 }
 }
 
 if (-not $apiAlreadyUp) {
-    Write-Host "Waiting for apps/api-byoc to become healthy..."
-    if (-not (Wait-ForHttp $apiHealthUrl $apiHeaders "apps/api-byoc")) { exit 1 }
+    # Wait-ForHttp above already confirmed apps/api-byoc is healthy — just
+    # fetch the response body for Step 6's sanity-check output below.
     $health = Invoke-RestMethod -Uri $apiHealthUrl -Headers $apiHeaders -TimeoutSec 3
 }
 Write-Host "apps/api-byoc healthy at $apiHealthUrl" -ForegroundColor Green

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, TooltipContentProps, XAxis, YAxis } from "recharts";
+import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { ResourceCost } from "@finops-lab/shared";
 import { formatCompactCurrency, formatCurrency } from "@/lib/format";
 import { EmptyState } from "./empty-state";
@@ -13,10 +13,13 @@ interface CostByResourceChartProps {
 
 const TOP_N = 10;
 
-function ChartTooltip({ active, payload, currency }: TooltipContentProps<number, string> & { currency: string }) {
-  if (!active || !payload?.length) return null;
-  const point = payload[0]?.payload as ResourceCost | undefined;
-  if (!point) return null;
+// Recharts' own Tooltip content-prop typing doesn't play well with this
+// toolchain (see CLAUDE.md) -- ChartTooltipBody takes a plain, already-
+// extracted ResourceCost instead of recharts' own prop types, so there's no
+// cross-type boundary for TypeScript to fight with. The <Tooltip
+// content={...}> callback below is left with an inferred (untyped)
+// parameter for the same reason.
+function ChartTooltipBody({ point, currency }: { point: ResourceCost; currency: string }) {
   return (
     <div className="rounded-md border border-[var(--border)] bg-[var(--chart-surface)] px-3 py-2 shadow-sm">
       <p className="text-xs text-[var(--text-secondary)]">{point.resourceName}</p>
@@ -60,7 +63,10 @@ export function CostByResourceChart({ resources, currency }: CostByResourceChart
             tick={{ fill: "var(--text-secondary)", fontSize: 12 }}
           />
           <Tooltip
-            content={(props: TooltipContentProps<number, string>) => <ChartTooltip {...props} currency={currency} />}
+            content={(props) => {
+              const point = props.active ? (props.payload?.[0]?.payload as ResourceCost | undefined) : undefined;
+              return point ? <ChartTooltipBody point={point} currency={currency} /> : null;
+            }}
             cursor={{ fill: "var(--gridline)", opacity: 0.4 }}
           />
           <Bar dataKey="cost" fill="var(--series-1)" radius={[0, 4, 4, 0]} maxBarSize={20} />

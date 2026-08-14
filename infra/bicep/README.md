@@ -21,10 +21,10 @@ discard.
 
 ## Deploy-to-Azure button URL
 
-Once pushed to `github.com/satyamamin/FinOps Lab` on `main`:
+Once pushed to `github.com/satyamamin/CloudGuard` on `main`:
 
 ```
-https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2Fsatyamamin%2FFinOps Lab%2Fmain%2Finfra%2Fbicep%2Fmain.json
+https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2Fsatyamamin%2FCloudGuard%2Fmain%2Finfra%2Fbicep%2Fmain.json
 ```
 
 This requires the repo (or at least this file) to be publicly readable on
@@ -46,6 +46,42 @@ against a personal/test subscription — confirms the Container App comes up,
 Postgres provisions, and the Reader + Cost Management Reader role
 assignments land on the Container App's Managed Identity at subscription
 scope.
+
+## Releasing a new image version
+
+`.github/workflows/build-api-image.yml` pushes `:latest` + `:<commit-sha>`
+on every push to `main` — fine for local iteration, but not something to
+point `containerImage`'s default at forever, since it means "whatever the
+most recent main commit happened to be," not "a version someone verified
+works." To cut an actual release:
+
+1. Make sure `main` is what you want to ship, then tag and push it:
+   ```
+   git tag v1.2.0
+   git push origin v1.2.0
+   ```
+   This triggers the same workflow, which additionally tags and pushes
+   `ghcr.io/satyamamin/finops-lab-api:1.2.0` (the CI strips the leading `v`
+   — standard Docker convention).
+2. Smoke-test the new image before trusting it — point
+   `apps/api-byoc/scripts/smoke-test.mjs` (`npm run smoke-test -w apps/api-byoc`)
+   at a real instance running it (the `rg-finops-lab-dev` test deployment is
+   the obvious target — update its Container App's image to the new tag
+   first via `az containerapp update --image ...`, same stale-revision
+   caveat as any other redeploy applies).
+3. Once it passes, update `containerImage`'s default in `main.bicep` to the
+   new pinned tag, rebuild `main.json` (see above), commit, and push — from
+   that point on, new customers deploying via the button get the version
+   you actually tested, not an untested moving target.
+4. Existing customers stay on whatever they already deployed (Container
+   Apps doesn't auto-update) — rolling out a fix to them means asking them
+   to re-run the deployment against the new template, there's no push
+   mechanism today.
+
+Rolling back is the same shape in reverse: if a version misbehaves, point
+`containerImage` back at the last known-good tag (or hand it directly to an
+affected customer to override in their own re-deploy) — this is the entire
+reason to tag releases instead of only ever building `:latest`.
 
 ## Known v1 gap
 

@@ -143,7 +143,8 @@ good/bad colors, status colors) are CSS custom properties scoped to a
 `.dashboard-root` class in `globals.css`, with light values as the default block
 and a dark override block. This keeps chart color decisions in one place rather
 than scattered across component files, and keeps them separate from the rest of
-the app's (currently token-less) Tailwind config.
+the app's Tailwind setup — v4, config-file-less (see `CLAUDE.md`'s Tailwind v4
+note), with no `@theme` design tokens defined outside this scoped block.
 
 ### 4.2 Chart-type-per-question, not one chart type everywhere
 
@@ -178,20 +179,22 @@ a hypothetical future metric where "up" is good.
   *parameterizable* type in its `.d.ts` files, which looks like it supports
   `<Tooltip<number, string>>` generic JSX instantiation — it doesn't; the actual
   exported `Tooltip` function is not generic, and that syntax fails to compile
-  ("Expected 0 type arguments, but got 2"). The working pattern used throughout
-  `components/dashboard/*-chart.tsx`: pass `content` as a function
-  (`content={(props: TooltipContentProps<number, string>) => <ChartTooltip {...props} currency={currency} />}`)
-  rather than a JSX element — Recharts clones tooltip props at runtime in a way
-  a pre-built JSX element can't be statically type-checked against — **and**
-  give `ChartTooltip` itself the matching explicit
-  `TooltipContentProps<number, string> & { currency: string }` prop type, not
-  the unparameterized default. Both sides have to agree: `formatter` is a
-  function-typed prop (contravariant), so spreading a
-  `TooltipContentProps<number, string>` value into a component typed with the
-  wider unparameterized `TooltipContentProps` fails to type-check under the
-  Next.js 16 / TS toolchain this app now runs — an earlier version of this
-  guidance recommended the unparameterized default on both sides, which relied
-  on looser inference that no longer holds.
+  ("Expected 0 type arguments, but got 2"). Two earlier fixes here (leaving
+  `content`'s callback param unparameterized; later giving it and a separate
+  `ChartTooltip` component matching explicit `TooltipContentProps<number,
+  string>` types) each worked at the time but **broke again** on a later,
+  unrelated dependency-tree change elsewhere in the workspace — evidence this
+  exact generic-inference boundary is fragile against whatever type-package
+  versions happen to resolve, not something a type-level fix reliably survives.
+  The current pattern in all 4 `components/dashboard/*-chart.tsx` files avoids
+  the boundary entirely instead of fighting it: `content={(props) => ...}`
+  keeps `props` **inferred, never re-annotated**, and renders a separate
+  `ChartTooltipBody` component typed with **plain, already-extracted values**
+  (e.g. `{ label: string; value: number; currency: string }`, or `{ point:
+  ResourceCost; currency: string }`) — never recharts' own prop types — so
+  there's no cross-type assignability check left for a future bump to break.
+  Coerce inline in the callback: `Number(props.payload[0]?.value ?? 0)`,
+  `String(props.label)`, `props.payload[0]?.payload as ResourceCost`.
 - **Route-segment `loading.tsx` gives automatic loading states.** No manual
   `isLoading` flags anywhere in the dashboard — Next.js's App Router shows each
   route's `loading.tsx` skeleton automatically while its Server Component's data

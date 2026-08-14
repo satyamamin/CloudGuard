@@ -159,11 +159,16 @@ model Instance {
 
 ## Open items
 
-- **Sync execution:** with one instance per customer instead of a shared
-  multi-tenant backend, Trigger.dev's job-queue model may be more than v1
-  needs — an Azure Container Apps scheduled job (cron) inside the same
-  deployment could replace it and drop an external dependency. Worth
-  deciding before Month 2 (Azure Connector) rather than after.
+- ~~**Sync execution:**~~ **Decided** (was open here, resolved in
+  `docs/architecture.md`'s "Jobs" row/rationale): with one instance per
+  customer instead of a shared multi-tenant backend, Trigger.dev's
+  job-queue model is more than BYOC needs and would require FinOps Lab to
+  centrally track every customer's backend URL — exactly the kind of
+  registry this tier is architected to avoid. An in-process scheduler
+  (`@nestjs/schedule`) running inside the same deployment replaces it
+  instead, dropping the external dependency. `docs/byoc/plan/cost-management-429-resilience.md`'s
+  Phase 2 already scopes the concrete implementation (a daily `@Cron` job);
+  not built yet.
 - **Clerk-metadata pairing** is a deliberate v1 shortcut (see above) —
   revisit once an instance needs to support more than a single linked
   backend per customer.

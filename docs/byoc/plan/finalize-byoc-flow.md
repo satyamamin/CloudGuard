@@ -37,7 +37,7 @@ container).
 | Onboarding UI (deploy button → pairing form → discover/select/sync stepper) | `apps/web/app/connect-azure` | Built |
 | Dashboard (Overview + 3 detail views, subscription switcher, period selector) | `apps/web/app/dashboard` | Built |
 | Deploy-to-Azure template (Container App + Managed Identity + Postgres + role assignments) | `infra/bicep`, compiled to `main.json` | Built, **never run as a real `az deployment group create`** |
-| Local dev orchestration | `local-dev-test/test-local-dev.ps1` | Built, not yet run through a full onboarding pass in this session |
+| Dev orchestration (local or Azure DB) | `dev-test/test-dev.ps1` | Built, not yet run through a full onboarding pass in this session |
 
 ---
 
@@ -76,12 +76,12 @@ real Azure infrastructure.
 4. `docker compose -f docker-compose.dev.yml up -d` (just `postgres` now
    that `postgres-saas` is gone)
 5. `npm run prisma:generate -w apps/api-byoc`, `npm run prisma:migrate:dev -w apps/api-byoc`
-6. `az login` (or confirm `local-dev-test/.env` Service Principal creds are
+6. `az login` (or confirm `dev-test/.env` Service Principal creds are
    set up for `ensure-az-login.ps1`'s non-interactive path)
 
 ### Run
 ```powershell
-.\local-dev-test\test-local-dev.ps1
+.\dev-test\test-dev.ps1
 ```
 Starts Postgres, `apps/api-byoc`, `apps/web`, waits for health, opens
 `http://localhost:3000/connect-azure`.

@@ -227,7 +227,7 @@ response — same mechanism, no schema changes.
 - `apps/api-byoc/src/costs/costs.module.ts` — register the new sync
   service/schedule module
 - `apps/api-byoc/package.json` — add `@nestjs/schedule`
-- `local-dev-test/viewer/index.html` — read/display `X-Data-Source`,
+- `dev-test/viewer/index.html` — read/display `X-Data-Source`,
   matching the existing `X-Cache` badge
 - `docs/byoc/connect-azure.md` — update the "Open items" bullet now that a first
   cut of the scheduled-sync direction exists

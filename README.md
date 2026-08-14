@@ -56,17 +56,17 @@ az bicep build --file infra/bicep/main.bicep --outfile infra/bicep/main.json
 az deployment group validate --resource-group <test-rg> --template-file infra/bicep/main.json
 ```
 
-## Restarting local dev (Connect Azure testing)
+## Restarting dev (Connect Azure testing)
 
-One-time setup (`npm install`, `.env` files, Prisma migrate) only needs to happen once. Each time you come back to test the Connect Azure flow locally, run these in order:
+One-time setup (`npm install`, `.env` files, Prisma migrate) only needs to happen once. Each time you come back to test the Connect Azure flow — against local Postgres or a real Azure Flexible Server, whichever `apps/api-byoc/.env`'s `DATABASE_URL` currently points at — run these in order:
 
 1. **Ensure Azure CLI has a valid session**:
    ```powershell
-   .\local-dev-test\ensure-az-login.ps1
+   .\dev-test\ensure-az-login.ps1
    ```
-   Logs in non-interactively via a Service Principal (see `local-dev-test/.env.example`) only if the current session's token has actually expired, then selects the target subscription. Avoids the interactive `az login` re-auth otherwise forced every few hours by Conditional Access sign-in-frequency policies on personal accounts.
+   Logs in non-interactively via a Service Principal (see `dev-test/.env.example`) only if the current session's token has actually expired, then selects the target subscription. Avoids the interactive `az login` re-auth otherwise forced every few hours by Conditional Access sign-in-frequency policies on personal accounts.
 
-2. **Make sure Docker Desktop is running**, then start local Postgres (safe to re-run, no-op if already up):
+2. **If `DATABASE_URL` points at `localhost`, make sure Docker Desktop is running**, then start local Postgres (safe to re-run, no-op if already up). Skip this step entirely if `DATABASE_URL` points at a real Azure Flexible Server instead:
    ```bash
    docker compose -f docker-compose.dev.yml up -d
    ```
@@ -83,7 +83,7 @@ One-time setup (`npm install`, `.env` files, Prisma migrate) only needs to happe
    ```
    Wait for `Ready in ...` from Next.js.
 
-5. **Start Prisma Studio** (separate new terminal, leave running) if you want to browse the local Postgres DB directly:
+5. **Start Prisma Studio** (separate new terminal, leave running) if you want to browse whichever database `DATABASE_URL` currently points at:
    ```bash
    cd apps/api-byoc && npx prisma studio --port 5555
    ```
@@ -99,7 +99,7 @@ One-time setup (`npm install`, `.env` files, Prisma migrate) only needs to happe
 
 Steps 1–7 above are automated by a single script:
 ```powershell
-.\local-dev-test\test-local-dev.ps1
+.\dev-test\test-dev.ps1
 ```
 Idempotent — skips Docker/`apps/api-byoc`/`apps/web`/Prisma Studio if already running instead of starting duplicates, and reuses an already-open Chrome window rather than spawning a new one.
 

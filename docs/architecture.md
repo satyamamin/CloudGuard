@@ -31,7 +31,7 @@ doc is that single place — one table, one canonical answer per layer.
 | Database | Neon (Postgres) | Azure Database for PostgreSQL — Flexible Server |
 | Cache | Upstash (Redis) | Azure Cache for Redis |
 | Secrets | Env vars early → a secrets manager later | Azure Key Vault |
-| Jobs | Trigger.dev | Trigger.dev |
+| Jobs | Trigger.dev | In-process scheduler (`@nestjs/schedule`, inside the customer's own Container App) |
 | Auth | Clerk | Clerk |
 | Resilience (Cost Management 429s) | N/A — no cost endpoints built yet | Catch-and-degrade at the API layer (clean `503` + Sentry alert), not a queue or retry system |
 
@@ -48,7 +48,7 @@ before assuming a row is live.
 | Database | Decided, not deployed — schema and migrations exist; local dev runs against a Postgres container standing in for Neon | **Shipped** — `infra/bicep` provisions Postgres Flexible Server today |
 | Cache | Decided, not built (Phase 3 of the SaaS build) | **Decided, not shipped.** BYOC ships today with an in-memory `Map` cache in `CostManagementService` — safe only because Bicep pins `minReplicas=maxReplicas=1`. Azure Cache for Redis is a planned upgrade, not a running resource; nothing in `infra/bicep` provisions it yet |
 | Secrets | Decided (env vars now, revisit at scale), not built | **Decided, not shipped.** No Key Vault exists in `infra/bicep` today — per `infra/bicep/README.md`, the deployment-output API key sits unencrypted in Container App config/deployment history, an accepted v1 gap. Key Vault is a stated future mitigation, not a running resource |
-| Jobs | Decided, not built | **Decided, not shipped.** BYOC has no scheduler today — sync is a manual `POST /sync` call triggered by the frontend during onboarding. This was an open, undecided item in `connect-azure.md` ("Trigger.dev vs. an Azure Container Apps scheduled job"); `docs/saas/plan/cloudguard-hosted.md` resolves it as Trigger.dev, for both tiers, not yet implemented on either |
+| Jobs | Decided, not built | **Decided, not shipped.** BYOC has no scheduler today — sync is a manual `POST /sync` call triggered by the frontend during onboarding. `connect-azure.md`'s "Sync execution" open item ("Trigger.dev vs. an Azure Container Apps scheduled job") is now resolved in favor of the latter — see rationale below — and `docs/byoc/plan/cost-management-429-resilience.md`'s Phase 2 already concretely proposes an in-process `@nestjs/schedule` `@Cron` job, not Trigger.dev. Neither phase is built yet |
 | Auth | **Shipped** — `apps/web` already uses Clerk, org-as-tenant, for the SaaS surface's auth | **Shipped** — same Clerk app, same org-as-tenant pattern, live in `apps/web` today |
 | Resilience (Cost Management 429s) | N/A | **Decided, not shipped.** `docs/byoc/plan/cost-management-429-resilience.md`'s Phase 1 scopes the production fix (catch 429 → clean `503`, wider cache TTL via `COST_CACHE_TTL_MINUTES`, Sentry alert) — status "not started" as of this doc; Phase 2 (synced-history fallback) is deferred further still. Two *adjacent* things did ship in local dev, but neither is Phase 1's fix: (1) `CostManagementService.queryLast30DaysCost` (used by `/sync`) was missing the 30-min in-memory cache every other cost query already had, so repeated syncs re-hit an already-throttled subscription — now fixed to share the same cache; (2) a dev-only `USE_MOCK_COST_DATA=true` flag makes `/costs/daily`, `/costs/by-service`, `/costs/by-resource` (and derived `/costs/accumulated`) return canned fixtures instead of calling Azure at all, for UI iteration. Neither gives production customers a clean error or an alert — that's still the open gap this row tracks |
 
@@ -92,15 +92,24 @@ graduate to a secrets manager (Key Vault for BYOC, any standard secrets
 manager for SaaS) before either needs to hold up under a real security
 review.
 
-**Jobs — Trigger.dev for both.** Originally an open question specific to
-BYOC (`connect-azure.md`'s "Sync execution" open item asked whether an
-Azure Container Apps scheduled job could replace an external job queue,
-given BYOC's one-instance-per-customer shape). Resolved instead as
-Trigger.dev for both tiers — SaaS's genuinely multi-tenant, potentially
-multi-replica backend needs a real job queue regardless, and using the same
-mechanism for BYOC avoids maintaining two different scheduling models for
-what is, on both tiers, the same underlying "pull cost data on a schedule"
-job.
+**Jobs — Trigger.dev for SaaS, in-process scheduling for BYOC.** Previously
+recorded here as "Trigger.dev for both tiers," which turned out not to
+match either `connect-azure.md`'s own open item or the concrete work that
+followed — reconciled to the split that actually makes sense per tier.
+SaaS's genuinely multi-tenant, potentially multi-replica, centrally-hosted
+backend needs a real external job queue regardless of this decision, so
+Trigger.dev is the natural fit there. BYOC is the opposite case: adopting
+Trigger.dev for BYOC would mean FinOps Lab centrally tracking every
+customer's backend URL so a central job orchestrator can reach into each
+one on a schedule — exactly the kind of FinOps-Lab-owned registry the BYOC
+tier is architected to avoid (see "Architecture" at the top of `CLAUDE.md`:
+"FinOps Lab has no backend or database of its own"; pairing data lives in
+per-org Clerk metadata specifically so no such registry needs to exist). An
+in-process scheduler running inside the customer's own already-deployed
+Container App has no such requirement — it's the same "customer owns
+everything" shape as the rest of BYOC. `docs/byoc/plan/cost-management-429-resilience.md`'s
+Phase 2 already reflects this: a plain `@nestjs/schedule` `@Cron` job, no
+Trigger.dev involved.
 
 **Auth — Clerk for both, already shipped.** Clerk organizations are the
 tenant boundary for both tiers (`orgId` used throughout `apps/web`) — the
@@ -202,10 +211,11 @@ beyond periodically re-running `npm run check-versions`:
 
 ## Open items
 
-- **Cache and Jobs are decided but unbuilt on both tiers** — until Redis and
-  Trigger.dev actually exist, BYOC keeps running on its single-replica-safe
-  in-memory cache and manual sync trigger; don't assume either row in the
-  table above reflects running infrastructure.
+- **Cache and Jobs are decided but unbuilt on both tiers** — until Azure
+  Cache for Redis and BYOC's in-process scheduler (or SaaS's Trigger.dev)
+  actually exist, BYOC keeps running on its single-replica-safe in-memory
+  cache and manual sync trigger; don't assume either row in the table above
+  reflects running infrastructure.
 - **Secrets manager choice for SaaS** is not yet named (Key Vault has no
   SaaS-side equivalent decided) — "any secrets manager" per
   `docs/saas/plan/cloudguard-hosted.md` is a placeholder, not a decision.

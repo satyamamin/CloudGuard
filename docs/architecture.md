@@ -50,7 +50,7 @@ before assuming a row is live.
 | Secrets | Decided (env vars now, revisit at scale), not built | **Decided, not shipped.** No Key Vault exists in `infra/bicep` today — per `infra/bicep/README.md`, the deployment-output API key sits unencrypted in Container App config/deployment history, an accepted v1 gap. Key Vault is a stated future mitigation, not a running resource |
 | Jobs | Decided, not built | **Decided, not shipped.** BYOC has no scheduler today — sync is a manual `POST /sync` call triggered by the frontend during onboarding. `connect-azure.md`'s "Sync execution" open item ("Trigger.dev vs. an Azure Container Apps scheduled job") is now resolved in favor of the latter — see rationale below — and `docs/byoc/plan/cost-management-429-resilience.md`'s Phase 2 already concretely proposes an in-process `@nestjs/schedule` `@Cron` job, not Trigger.dev. Neither phase is built yet |
 | Auth | **Shipped** — `apps/web` already uses Clerk, org-as-tenant, for the SaaS surface's auth | **Shipped** — same Clerk app, same org-as-tenant pattern, live in `apps/web` today |
-| Resilience (Cost Management 429s) | N/A | **Decided, not shipped.** `docs/byoc/plan/cost-management-429-resilience.md`'s Phase 1 scopes the production fix (catch 429 → clean `503`, wider cache TTL via `COST_CACHE_TTL_MINUTES`, Sentry alert) — status "not started" as of this doc; Phase 2 (synced-history fallback) is deferred further still. Two *adjacent* things did ship in local dev, but neither is Phase 1's fix: (1) `CostManagementService.queryLast30DaysCost` (used by `/sync`) was missing the 30-min in-memory cache every other cost query already had, so repeated syncs re-hit an already-throttled subscription — now fixed to share the same cache; (2) a dev-only `USE_MOCK_COST_DATA=true` flag makes `/costs/daily`, `/costs/by-service`, `/costs/by-resource` (and derived `/costs/accumulated`) return canned fixtures instead of calling Azure at all, for UI iteration. Neither gives production customers a clean error or an alert — that's still the open gap this row tracks |
+| Resilience (Cost Management 429s) | N/A | **Shipped.** `docs/byoc/plan/cost-management-429-resilience.md`'s Phase 1 (catch 429 → clean `503`, wider cache TTL via `COST_CACHE_TTL_MINUTES`, Sentry alert) is live in production — `AzureQuotaExceededException`/`AzureQuotaExceededFilter` in `apps/api-byoc/src/common/`, see root `CLAUDE.md` for the full mechanism. Verified against real Azure throttling (forced repeatedly, correct `retryAfterSeconds` extracted each time), not just unit tests. Phase 2 (synced-history fallback) is still deferred, not started. Two smaller things also shipped alongside Phase 1: (1) `CostManagementService.queryLast30DaysCost` (used by `/sync`) now shares the same in-memory cache every other cost query already had, so repeated syncs don't re-hit an already-throttled subscription; (2) a dev-only `USE_MOCK_COST_DATA=true` flag makes `/costs/daily`, `/costs/by-service`, `/costs/by-resource` (and derived `/costs/accumulated`) return canned fixtures instead of calling Azure at all, for UI iteration |
 
 ---
 
@@ -221,9 +221,7 @@ beyond periodically re-running `npm run check-versions`:
   `docs/saas/plan/cloudguard-hosted.md` is a placeholder, not a decision.
 - This doc should be updated whenever a "not shipped" row above actually
   ships, so it doesn't drift the way a doc describing only intentions would.
-- **Resilience is decided but not shipped** — `docs/byoc/plan/cost-management-429-resilience.md`'s
-  Phase 1 (clean `503`, wider prod cache TTL, Sentry alert) is still "not
-  started"; Phase 2 (synced-history fallback) is further deferred behind
-  that. Don't confuse the dev-only `USE_MOCK_COST_DATA` fixture layer or the
-  `queryLast30DaysCost` cache fix with Phase 1 being done — both are real
-  but neither gives a production customer a clean error path.
+- **Resilience Phase 1 is shipped** — `docs/byoc/plan/cost-management-429-resilience.md`'s
+  Phase 1 (clean `503`, wider prod cache TTL, Sentry alert) is live in
+  production, verified against real Azure throttling; Phase 2
+  (synced-history fallback) is still deferred, not started.

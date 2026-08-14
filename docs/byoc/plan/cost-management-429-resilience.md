@@ -1,13 +1,17 @@
 # Cost Management 429 Resilience — Guardrail Now, Synced History Later
 
-> **Status: not started** (both phases). Merges what were two separate docs
-> (`lightweight-429-guardrail.md`, `daily-synced-cost-history.md`) into one,
-> since they're two stages of the same problem, not two different problems.
-> Companion docs: `docs/architecture.md` (canonical Resilience row —
-> keep in sync with whichever phase below actually ships),
-> `docs/byoc/azure-cost-management-endpoints.md` (the `generateCostDetailsReport`
-> API worth reconsidering for Phase 2's backfill instead of many small
-> `query.usage` calls)
+> **Status: Phase 1 shipped and deployed; Phase 2 not started.** Merges what
+> were two separate docs (`lightweight-429-guardrail.md`,
+> `daily-synced-cost-history.md`) into one, since they're two stages of the
+> same problem, not two different problems. Phase 1's guardrail
+> (`AzureQuotaExceededException`/`AzureQuotaExceededFilter` in
+> `apps/api-byoc/src/common/`, wired into `CostsService`/`main.ts`) is live
+> in production — verified against real Azure throttling, not just unit
+> tests, see root `CLAUDE.md`. Companion docs: `docs/architecture.md`
+> (canonical Resilience row — keep in sync with whichever phase below
+> actually ships), `docs/byoc/azure-cost-management-endpoints.md` (the
+> `generateCostDetailsReport` API worth reconsidering for Phase 2's backfill
+> instead of many small `query.usage` calls)
 
 ---
 

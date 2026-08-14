@@ -201,9 +201,11 @@ a hypothetical future metric where "up" is good.
   fetch is in flight.
 - **Errors surface as a real message, not a generic failure screen.** Every
   detail page wraps its fetch in try/catch and renders `<ErrorState>` with the
-  actual thrown error message (which, notably, includes Azure Cost Management's
-  own `429` rate-limit wording when that's the cause — see `apps/api-byoc`'s
-  `CostManagementService` for the caching that mitigates this in practice).
+  actual thrown error message. A real Azure `429` no longer surfaces as raw
+  rate-limit wording — `apps/api-byoc`'s `AzureQuotaExceededFilter` (see root
+  `CLAUDE.md`'s "429 resilience guardrail") turns it into a clean, friendly
+  503 message before it ever reaches the frontend, and `lib/backend-client.ts`
+  passes that message through to `ErrorState` verbatim.
 
 ## 6. Screenshots
 
@@ -292,10 +294,12 @@ apps/web/
 
 ## 8. Known gaps / not yet done
 
-- Loading/empty/error states have been built (see §5) but not explicitly
-  exercised end-to-end (e.g. deliberately triggering a `429` or pointing at a
-  subscription with zero synced cost data) — the code paths exist, the scenarios
-  haven't been walked through live.
+- Loading/empty states have been built (see §5) but not explicitly exercised
+  end-to-end (e.g. pointing at a subscription with zero synced cost data) —
+  the code paths exist, the scenario hasn't been walked through live. The
+  429/error-state path *has* now been verified live (real Azure throttling
+  forced repeatedly, `ErrorState` confirmed rendering the clean message) —
+  see root `CLAUDE.md`'s "429 resilience guardrail".
 - The Cost by resource table has a "show all" toggle but no client-side sorting,
   search, or pagination — fine at ~124 rows (the real data seen in testing), may
   need revisiting at much larger resource counts.

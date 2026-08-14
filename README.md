@@ -103,6 +103,13 @@ Steps 1–7 above are automated by a single script:
 ```
 Idempotent — skips Docker/`apps/api-byoc`/`apps/web`/Prisma Studio if already running instead of starting duplicates, and reuses an already-open Chrome window rather than spawning a new one.
 
+Two companion scripts:
+```powershell
+.\dev-test\stop-dev.ps1              # stops apps/api-byoc, apps/web, Prisma Studio, and local Postgres
+.\dev-test\set-mode.ps1 -Mode local  # or -Mode azure — swaps apps/api-byoc/.env + apps/web/.env.local
+```
+`set-mode.ps1` switches between two complete profiles in one command: `local` (local Postgres, mock cost data, a dedicated local-only Clerk app) and `azure` (real Azure Postgres + Cost Management, the Clerk app paired with the deployed Container App). It auto-restarts anything already running unless `-NoRestart` is passed. Both modes exist because local is fast/free but structurally can't verify Managed Identity or real throttling, while azure can — and both scripts exist because hand-editing two separate `.env` files in sync, then remembering to restart everything, is exactly the kind of thing that goes silently wrong (see `CLAUDE.md` for the full rationale).
+
 ## Commands
 
 | Command | Description |

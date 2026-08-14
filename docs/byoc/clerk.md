@@ -95,3 +95,28 @@ There's no admin tool in this app to look up an org by customer name →
 (searchable by name) or the snippet above once you already have the
 `orgId`. Not built because v1 has no internal admin surface at all yet;
 worth revisiting if support/debugging volume grows.
+
+### Known gap: no UI to change an existing pairing
+
+`apps/web/app/connect-azure/page.tsx` only renders `PairingForm` when
+`getMaskedInstancePairing(orgId)` returns null (`{!pairing && ...}`) — once
+an org is paired, there's no button anywhere in the app to change the
+Backend URL/API key. `POST /api/instance` (`app/api/instance/route.ts`)
+would happily overwrite the pairing if called, but nothing in the UI ever
+calls it again after the first pairing. Two workarounds, depending on why
+you need to change it:
+- **One-off/support**: edit `privateMetadata.instancePairing` directly in
+  the Clerk Dashboard (Option 1 above).
+- **Local dev, wanting to point at `localhost:3001` instead of an
+  already-paired deployed instance**: use a second, dedicated Clerk
+  application instead of fighting this gap — a fresh org there has no
+  pairing to conflict with, so `PairingForm` shows normally. This is
+  exactly what `dev-test/set-mode.ps1 -Mode local|azure` automates (see
+  root `CLAUDE.md`), switching `apps/web/.env.local`'s Clerk keys between
+  a local-only app and the one already paired with the deployed instance.
+  Set up the second app with the same "Minimum setup" steps above, but put
+  its keys in `apps/web/.env.dev-local` (the deployed-instance app's keys
+  go in `.env.dev-azure`) — **not** `.env.local` directly. `set-mode.ps1`
+  overwrites `.env.local` from whichever of those two files you select, so
+  keys added only to `.env.local` get silently clobbered on the next mode
+  switch.

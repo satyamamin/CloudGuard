@@ -1,11 +1,13 @@
 # Finalize BYOC Flow — Local Verification, Then Real Azure Deployment
 
 > Module: Core API — "Connect & Discover" (BYOC tier)
-> Status: planning — the flow described in `docs/byoc/connect-azure.md` is
-> already built end-to-end (see "What's already built" below); nothing
-> here is new feature work. This doc tracks getting it *verified*, first
-> against a local stack, then against a real Azure subscription, before
-> calling v1 done.
+> Status: **Phase 1 (local) and most of Phase 2 (real Azure) done** — see
+> "What's been verified" below. Not fully closed: verification ran against
+> an *already-deployed* Container App/Postgres in `rg-finops-lab-dev`, not a
+> completely fresh `az deployment group create` from a brand-new resource
+> group — the actual "click Deploy to Azure, pair, done" first-run
+> experience still hasn't been exercised end-to-end. Nothing here is new
+> feature work.
 > Companion docs: `docs/byoc/connect-azure.md` (the flow being verified, source
 > of truth for behavior), `infra/bicep/README.md` (deploy mechanics),
 > `README.md`'s "Restarting local dev" section (the exact local commands
@@ -36,8 +38,39 @@ container).
 | 4 cost endpoints (`/costs/daily`, `/costs/accumulated`, `/costs/by-service`, `/costs/by-resource`) | `apps/api-byoc/src/costs` | Built |
 | Onboarding UI (deploy button → pairing form → discover/select/sync stepper) | `apps/web/app/connect-azure` | Built |
 | Dashboard (Overview + 3 detail views, subscription switcher, period selector) | `apps/web/app/dashboard` | Built |
-| Deploy-to-Azure template (Container App + Managed Identity + Postgres + role assignments) | `infra/bicep`, compiled to `main.json` | Built, **never run as a real `az deployment group create`** |
-| Dev orchestration (local or Azure DB) | `dev-test/test-dev.ps1` | Built, not yet run through a full onboarding pass in this session |
+| Deploy-to-Azure template (Container App + Managed Identity + Postgres + role assignments) | `infra/bicep`, compiled to `main.json` | Built; verified against an existing deployed instance, **not yet run as a fresh `az deployment group create`** |
+| Dev orchestration (local or Azure DB) | `dev-test/test-dev.ps1`, `set-mode.ps1`, `stop-dev.ps1` | Built and run through full onboarding + dashboard passes, both locally and against real Azure |
+
+## What's been verified (this session)
+
+Both phases below were substantially exercised, though not in the exact
+order/shape originally planned — real-Azure verification happened against
+an **already-deployed** Container App + Postgres in `rg-finops-lab-dev`
+(left running from an earlier session), not a from-scratch deployment:
+
+- Full onboarding (pairing → discover → select → sync) and dashboard
+  (Overview + all 3 detail views) confirmed working against real Azure Cost
+  Management data, both via a local `apps/api-byoc` process and the deployed
+  Container App.
+- The 429 error path specifically verified live — real Azure throttling
+  forced repeatedly, `ErrorState` confirmed rendering the guardrail's clean
+  message (see root `CLAUDE.md`'s "429 resilience guardrail").
+- Two real, previously-undetected production bugs found and fixed in the
+  process (both now shipped, see root `CLAUDE.md`): `apps/api-byoc/Dockerfile`
+  never copied `prisma.config.ts` into the runtime image, so
+  `docker-entrypoint.sh`'s `prisma migrate deploy` crash-looped on any fresh
+  container boot; separately, `@azure/arm-subscriptions` was nested under
+  `apps/api-byoc/node_modules` instead of hoisted to root, so the image
+  shipped without it. Neither was caught by local dev, since neither goes
+  through a real Docker build + fresh container boot.
+- The subscription-scoping gotcha (a deployment's Managed Identity only
+  gets automatic RBAC on the subscription it deployed into — confirmed via
+  `az role assignment list`, matches `docs/byoc/azure-resource-inventory.md`'s
+  existing documentation of this) reproduced live: selecting a subscription
+  the identity had no access to failed with a generic frontend error,
+  root-caused via real Container App logs (needs `Microsoft.App/containerApps/getAuthToken/action`,
+  which the read-only service-principal identity used for Cost Management
+  testing doesn't have — needed the elevated personal account instead).
 
 ---
 

@@ -67,8 +67,33 @@ works." To cut an actual release:
    `apps/api-byoc/scripts/smoke-test.mjs` (`npm run smoke-test -w apps/api-byoc`)
    at a real instance running it (the `rg-finops-lab-dev` test deployment is
    the obvious target — update its Container App's image to the new tag
-   first via `az containerapp update --image ...`, same stale-revision
-   caveat as any other redeploy applies).
+   first via `az containerapp update --image ghcr.io/.../finops-lab-api:sha-<short-sha>`,
+   the explicit immutable tag, not `:latest` — see the stale-revision caveat
+   below).
+
+**Stale-revision caveat, confirmed the hard way this session:** neither
+`az containerapp restart` nor `az containerapp secret set` alone actually
+gets you a fresh boot of new code/config —
+- A plain restart reuses whatever image the current revision already has
+  pulled; it does **not** re-pull `:latest` even if a newer `:latest` exists
+  on the registry. Use `az containerapp update --image <explicit-tag>` to
+  force a genuinely new revision against a specific image.
+- `az containerapp secret set` updates the secret's stored value but warns
+  explicitly that existing replicas need restarting to see it — and a plain
+  `az containerapp revision restart` on an *existing* revision can leave the
+  old (stale-secret) replica alive as the traffic target while a new one
+  spins up alongside it, rather than atomically replacing it. `az
+  containerapp update --image ...` (even re-specifying the same image) is
+  the reliable way to force a clean single-replica swap.
+
+This surfaced two real, previously-undetected production bugs: the
+Container App had been running continuously since before this session's
+Prisma 7 migration, so it never rebooted and never hit the
+`prisma.config.ts`-not-copied-into-the-Docker-image bug (see root
+`CLAUDE.md`) until a restart was forced for an unrelated reason. Don't
+assume a long-uptime Container App is bug-free just because it's been
+running fine — verify any Dockerfile/entrypoint change against a real
+`docker build` + fresh container boot, not just "it's still up."
 3. Once it passes, update `containerImage`'s default in `main.bicep` to the
    new pinned tag, rebuild `main.json` (see above), commit, and push — from
    that point on, new customers deploying via the button get the version

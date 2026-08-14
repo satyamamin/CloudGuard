@@ -36,6 +36,7 @@ COPY --from=builder /repo/packages/shared/dist ./node_modules/@finops-lab/shared
 COPY --from=builder /repo/packages/shared/package.json ./node_modules/@finops-lab/shared/package.json
 COPY --from=builder /repo/apps/api-byoc/dist ./apps/api-byoc/dist
 COPY --from=builder /repo/apps/api-byoc/prisma ./apps/api-byoc/prisma
+COPY --from=builder /repo/apps/api-byoc/prisma.config.ts ./apps/api-byoc/prisma.config.ts
 COPY --from=builder /repo/apps/api-byoc/package.json ./apps/api-byoc/package.json
 COPY apps/api-byoc/docker-entrypoint.sh ./apps/api-byoc/docker-entrypoint.sh
 

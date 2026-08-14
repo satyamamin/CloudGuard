@@ -55,7 +55,13 @@ class BackendClient {
     });
 
     if (!response.ok) {
-      throw new Error(`Backend request to ${path} failed with status ${response.status}`);
+      // NestJS's default error shape (and AzureQuotaExceededFilter's clean
+      // 503) both send { statusCode, message } — surface that message when
+      // present so callers like ErrorState show the real reason instead of
+      // a bare status code.
+      const body = await response.json().catch(() => null);
+      const message = body && typeof body === "object" && "message" in body ? String(body.message) : undefined;
+      throw new Error(message ?? `Backend request to ${path} failed with status ${response.status}`);
     }
 
     return response.json();

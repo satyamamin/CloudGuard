@@ -14,6 +14,7 @@
   "dependencies": {
     "@azure/arm-costmanagement": "^1.0.0",
     "@azure/arm-subscriptions": "^5.1.1",
+    "@azure/core-rest-pipeline": "^1.25.0",
     "@azure/identity": "^4.4.1",
     "@finops-lab/shared": "*",
     "@nestjs/common": "^11.1.29",
@@ -21,6 +22,7 @@
     "@nestjs/platform-express": "^11.1.29",
     "@prisma/adapter-pg": "^7.9.1",
     "@prisma/client": "^7.9.1",
+    "@sentry/nestjs": "^10.70.0",
     "class-transformer": "^0.5.1",
     "class-validator": "^0.15.1",
     "pg": "^8.23.0",

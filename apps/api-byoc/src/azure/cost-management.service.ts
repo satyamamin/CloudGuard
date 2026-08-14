@@ -25,6 +25,15 @@ const useMockCostData = process.env.USE_MOCK_COST_DATA === "true";
 // freshness while meaningfully cutting 429 risk. Override with COST_CACHE_TTL_MINUTES.
 const CACHE_TTL_MS = (Number(process.env.COST_CACHE_TTL_MINUTES) || 240) * 60 * 1000;
 
+// Without a ClientType header, calls fall into Azure's shared 2,000/min
+// default bucket alongside every other caller that also omits one. Doesn't
+// move the needle on the throttling we actually see (the much tighter
+// per-scope/4-min and per-tenant/20-min limits bind first, independent of
+// ClientType) but it's free and gives Azure-side attribution if ever needed.
+const COST_MANAGEMENT_REQUEST_OPTIONS = {
+  requestOptions: { headers: { ClientType: "FinOpsLab-CostReporting" } },
+};
+
 @Injectable()
 export class CostManagementService {
   private readonly cache = new Map<string, { expiresAt: number; data: unknown }>();
@@ -46,16 +55,20 @@ export class CostManagementService {
       const client = new CostManagementClient(this.credentialProvider.get());
       const scope = `/subscriptions/${azureSubscriptionId}`;
 
-      const result = await client.query.usage(scope, {
-        type: "ActualCost",
-        timeframe: "MonthToDate",
-        dataset: {
-          granularity: "Daily",
-          aggregation: {
-            totalCost: { name: "Cost", function: "Sum" },
+      const result = await client.query.usage(
+        scope,
+        {
+          type: "ActualCost",
+          timeframe: "MonthToDate",
+          dataset: {
+            granularity: "Daily",
+            aggregation: {
+              totalCost: { name: "Cost", function: "Sum" },
+            },
           },
         },
-      });
+        COST_MANAGEMENT_REQUEST_OPTIONS,
+      );
 
       const rows = result?.rows ?? [];
       const totalCost = rows.reduce((sum: number, row) => sum + Number(row[0] ?? 0), 0);
@@ -80,17 +93,21 @@ export class CostManagementService {
       const client = new CostManagementClient(this.credentialProvider.get());
       const scope = `/subscriptions/${azureSubscriptionId}`;
 
-      const result = await client.query.usage(scope, {
-        type: "ActualCost",
-        timeframe: "Custom",
-        timePeriod: { from, to },
-        dataset: {
-          granularity: "Daily",
-          aggregation: {
-            totalCost: { name: "Cost", function: "Sum" },
+      const result = await client.query.usage(
+        scope,
+        {
+          type: "ActualCost",
+          timeframe: "Custom",
+          timePeriod: { from, to },
+          dataset: {
+            granularity: "Daily",
+            aggregation: {
+              totalCost: { name: "Cost", function: "Sum" },
+            },
           },
         },
-      });
+        COST_MANAGEMENT_REQUEST_OPTIONS,
+      );
 
       const costIndex = findColumnIndex(result, "Cost");
       const dateIndex = findColumnIndex(result, "UsageDate");
@@ -138,18 +155,22 @@ export class CostManagementService {
       const client = new CostManagementClient(this.credentialProvider.get());
       const scope = `/subscriptions/${azureSubscriptionId}`;
 
-      const result = await client.query.usage(scope, {
-        type: "ActualCost",
-        timeframe: "Custom",
-        timePeriod: { from, to },
-        dataset: {
-          granularity: "None",
-          aggregation: {
-            totalCost: { name: "Cost", function: "Sum" },
+      const result = await client.query.usage(
+        scope,
+        {
+          type: "ActualCost",
+          timeframe: "Custom",
+          timePeriod: { from, to },
+          dataset: {
+            granularity: "None",
+            aggregation: {
+              totalCost: { name: "Cost", function: "Sum" },
+            },
+            grouping: [{ type: "Dimension", name: "ServiceName" }],
           },
-          grouping: [{ type: "Dimension", name: "ServiceName" }],
         },
-      });
+        COST_MANAGEMENT_REQUEST_OPTIONS,
+      );
 
       const costIndex = findColumnIndex(result, "Cost");
       const serviceNameIndex = findColumnIndex(result, "ServiceName");
@@ -182,18 +203,22 @@ export class CostManagementService {
       const client = new CostManagementClient(this.credentialProvider.get());
       const scope = `/subscriptions/${azureSubscriptionId}`;
 
-      const result = await client.query.usage(scope, {
-        type: "ActualCost",
-        timeframe: "Custom",
-        timePeriod: { from, to },
-        dataset: {
-          granularity: "None",
-          aggregation: {
-            totalCost: { name: "Cost", function: "Sum" },
+      const result = await client.query.usage(
+        scope,
+        {
+          type: "ActualCost",
+          timeframe: "Custom",
+          timePeriod: { from, to },
+          dataset: {
+            granularity: "None",
+            aggregation: {
+              totalCost: { name: "Cost", function: "Sum" },
+            },
+            grouping: [{ type: "Dimension", name: "ResourceId" }],
           },
-          grouping: [{ type: "Dimension", name: "ResourceId" }],
         },
-      });
+        COST_MANAGEMENT_REQUEST_OPTIONS,
+      );
 
       const costIndex = findColumnIndex(result, "Cost");
       const resourceIdIndex = findColumnIndex(result, "ResourceId");

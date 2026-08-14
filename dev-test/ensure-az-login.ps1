@@ -1,6 +1,6 @@
-# Ensures the Azure CLI has a valid session before local Connect Azure testing.
+# Ensures the Azure CLI has a valid session before Connect Azure testing.
 #
-# Logs in non-interactively via a Service Principal (local-dev-test/.env) ONLY if the
+# Logs in non-interactively via a Service Principal (dev-test/.env) ONLY if the
 # current session's token has actually expired -- avoids the interactive
 # `az login` re-auth normally forced by Conditional Access sign-in-frequency
 # policies on personal accounts. Always finishes by selecting the target
@@ -10,7 +10,7 @@ $ErrorActionPreference = "Stop"
 
 $envFile = Join-Path $PSScriptRoot ".env"
 if (-not (Test-Path $envFile)) {
-    Write-Error "local-dev-test/.env not found. Copy local-dev-test/.env.example to local-dev-test/.env and fill in real values first."
+    Write-Error "dev-test/.env not found. Copy dev-test/.env.example to dev-test/.env and fill in real values first."
     exit 1
 }
 
@@ -27,7 +27,7 @@ $tenantId = $env:AZURE_SP_TENANT_ID
 $subscription = $env:AZURE_SUBSCRIPTION
 
 if (-not $appId -or -not $secret -or -not $tenantId) {
-    Write-Error "AZURE_SP_APP_ID, AZURE_SP_SECRET, and AZURE_SP_TENANT_ID must all be set in local-dev-test/.env."
+    Write-Error "AZURE_SP_APP_ID, AZURE_SP_SECRET, and AZURE_SP_TENANT_ID must all be set in dev-test/.env."
     exit 1
 }
 

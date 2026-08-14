@@ -1,6 +1,6 @@
-# One-shot local dev startup for Connect Azure testing (README.md "Restarting
-# local dev" steps 1-7). Idempotent: safe to re-run — skips anything that's
-# already running instead of spawning duplicate processes/terminals.
+# One-shot dev startup for Connect Azure testing (README.md "Restarting dev"
+# steps 1-7). Idempotent: safe to re-run — skips anything that's already
+# running instead of spawning duplicate processes/terminals.
 
 $ErrorActionPreference = "Stop"
 $repoRoot = Split-Path $PSScriptRoot -Parent
@@ -37,38 +37,49 @@ function Wait-ForHttp($url, $headers, $label, $timeoutSec = 60, [switch]$Silent)
 Write-Host "== Step 1: Azure CLI session ==" -ForegroundColor Cyan
 & (Join-Path $PSScriptRoot "ensure-az-login.ps1")
 
-# Step 2 — Docker + local Postgres
-Write-Host "`n== Step 2: Docker / Postgres ==" -ForegroundColor Cyan
-docker info -f "{{.ServerVersion}}" *> $null
-if ($LASTEXITCODE -ne 0) {
-    $dockerDesktopExe = "C:\Program Files\Docker\Docker\Docker Desktop.exe"
-    if (-not (Test-Path $dockerDesktopExe)) {
-        Write-Error "Docker Desktop isn't running and wasn't found at '$dockerDesktopExe'. Start it manually, then re-run this script."
-        exit 1
-    }
-    Write-Host "Docker Desktop isn't running — starting it..."
-    Start-Process $dockerDesktopExe
+# Read apps/api-byoc/.env early (Step 3 needs it anyway) so Step 2 can decide
+# whether the local Postgres container is even relevant.
+$apiEnv = Read-DotEnv (Join-Path $repoRoot "apps\api-byoc\.env")
 
-    $elapsed = 0
-    $timeoutSec = 120
-    while ($LASTEXITCODE -ne 0 -and $elapsed -lt $timeoutSec) {
-        Start-Sleep -Seconds 5
-        $elapsed += 5
-        docker info -f "{{.ServerVersion}}" *> $null
-    }
+# Step 2 — Docker + local Postgres. Skipped entirely when DATABASE_URL points
+# at a remote host (e.g. an Azure Flexible Server) instead of the
+# docker-compose container — starting Docker Desktop just to leave an unused
+# container running serves no purpose in that case.
+Write-Host "`n== Step 2: Docker / Postgres ==" -ForegroundColor Cyan
+$usingLocalDb = $apiEnv["DATABASE_URL"] -match "localhost"
+if (-not $usingLocalDb) {
+    Write-Host "DATABASE_URL doesn't point at localhost — skipping local Postgres container."
+} else {
+    docker info -f "{{.ServerVersion}}" *> $null
     if ($LASTEXITCODE -ne 0) {
-        Write-Error "Docker Desktop didn't become ready within ${timeoutSec}s. Check it manually, then re-run this script."
-        exit 1
+        $dockerDesktopExe = "C:\Program Files\Docker\Docker\Docker Desktop.exe"
+        if (-not (Test-Path $dockerDesktopExe)) {
+            Write-Error "Docker Desktop isn't running and wasn't found at '$dockerDesktopExe'. Start it manually, then re-run this script."
+            exit 1
+        }
+        Write-Host "Docker Desktop isn't running — starting it..."
+        Start-Process $dockerDesktopExe
+
+        $elapsed = 0
+        $timeoutSec = 120
+        while ($LASTEXITCODE -ne 0 -and $elapsed -lt $timeoutSec) {
+            Start-Sleep -Seconds 5
+            $elapsed += 5
+            docker info -f "{{.ServerVersion}}" *> $null
+        }
+        if ($LASTEXITCODE -ne 0) {
+            Write-Error "Docker Desktop didn't become ready within ${timeoutSec}s. Check it manually, then re-run this script."
+            exit 1
+        }
+        Write-Host "Docker Desktop is ready."
     }
-    Write-Host "Docker Desktop is ready."
+    docker compose -f (Join-Path $repoRoot "docker-compose.dev.yml") up -d postgres
 }
-docker compose -f (Join-Path $repoRoot "docker-compose.dev.yml") up -d postgres
 
 # Steps 3-4 — apps/api-byoc + apps/web. Launched as two tabs of one Windows
 # Terminal window (wt.exe) instead of two separate console windows — falls
 # back to separate `powershell` windows if wt.exe isn't installed.
 Write-Host "`n== Step 3: apps/api-byoc ==" -ForegroundColor Cyan
-$apiEnv = Read-DotEnv (Join-Path $repoRoot "apps\api-byoc\.env")
 $apiPort = if ($apiEnv["PORT"]) { $apiEnv["PORT"] } else { "3001" }
 $apiKey = $apiEnv["API_KEY"]
 $apiHealthUrl = "http://localhost:$apiPort/health"

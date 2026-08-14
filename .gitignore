@@ -31,6 +31,12 @@ secrets.*
 **/terraform.tfvars
 docs/Internal integration secret.txt
 
+# dev-test/set-mode.ps1's per-mode env templates (real DB passwords, Clerk
+# secret keys) -- named *.dev-local/*.dev-azure so they don't collide with
+# .env/.env.local, which the mode switch script also writes to.
+.env.dev-local
+.env.dev-azure
+
 # Python
 __pycache__/
 *.pyc

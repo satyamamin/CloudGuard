@@ -13,7 +13,7 @@
   },
   "dependencies": {
     "@azure/arm-costmanagement": "^1.0.0",
-    "@azure/arm-subscriptions": "^5.1.1",
+    "@azure/arm-subscriptions": "^6.0.0",
     "@azure/core-rest-pipeline": "^1.25.0",
     "@azure/identity": "^4.4.1",
     "@finops-lab/shared": "*",

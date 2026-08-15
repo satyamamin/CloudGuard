@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.46.1.21595",
-      "templateHash": "6357791655158635495"
+      "templateHash": "15608374636876053216"
     }
   },
   "parameters": {
@@ -32,7 +32,7 @@
     },
     "frontendOrigin": {
       "type": "string",
-      "defaultValue": "https://finops-lab.vercel.app",
+      "defaultValue": "https://cloud-guard-web.vercel.app",
       "metadata": {
         "description": "Origin of the FinOps Lab frontend allowed to call this backend (CORS)."
       }

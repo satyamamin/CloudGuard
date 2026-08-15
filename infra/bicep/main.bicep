@@ -18,7 +18,7 @@ param location string = resourceGroup().location
 param containerImage string = 'ghcr.io/satyamamin/finops-lab-api:latest'
 
 @description('Origin of the FinOps Lab frontend allowed to call this backend (CORS).')
-param frontendOrigin string = 'https://finops-lab.vercel.app'
+param frontendOrigin string = 'https://cloud-guard-web.vercel.app'
 
 @secure()
 @description('Shown once as a deployment output; the customer pastes it into the FinOps Lab frontend to pair. NOTE: Azure deployment outputs remain visible in this resource group\'s Deployment history to anyone with read access — accepted as a v1 trial-scope tradeoff, see docs/byoc/connect-azure.md.')

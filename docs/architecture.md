@@ -161,14 +161,20 @@ trust this table; it goes stale immediately):**
 Most of the majors flagged in the previous snapshot (2026-08-13) got their
 own scoped upgrade passes since then — NestJS 10→11, Prisma 5→7, Tailwind
 3→4, Zod 3→4, and TypeScript 5→6 all shipped (each with real breaking
-changes, documented in `CLAUDE.md`). What's left:
+changes, documented in `CLAUDE.md`).
+
+Two more shipped on 2026-09-16, both of which *corrected* a mismatch rather
+than introducing one: `@types/express` 4→5 (`@nestjs/platform-express@11`
+pins `express` 5.2.1 exactly, so the v4 types described a version that
+wasn't running) and `tailwind-merge` 2→3 (v3 is the line that supports
+Tailwind v4, which this repo moved to earlier; v2 resolves conflicts against
+v3 class names). What's left:
 
 | Package | Current | Latest | Notes |
 |---|---|---|---|
 | `@azure/arm-subscriptions` | 5.1.1 | 6.0.0 | **blocked, not just deferred** — confirmed by inspecting the actual published `.d.ts` files for both 6.0.0 and the 7.0.0-beta.1 preview: the "list all subscriptions" operation this app's `/subscriptions` endpoint depends on has been removed from the SDK entirely in both. Do not attempt this bump until upstream restores it |
 | `typescript` | 6.0.3 | 7.0.2 | **blocked, not just deferred** — NestJS's own CLI refuses to run under 7.0 ("the compiler API... is expected to return in 7.1"); 6.0.3 is the real current ceiling for this stack |
 | `@types/node` | 20.19.43 | 26.2.0 | major — stay on the `20.x` line matching `node:20-alpine` until that image bumps too |
-| `@types/express` | 4.17.25 | 5.0.6 | major, tracks Express major (not itself a dependency here) |
 | `eslint` | 9.39.5 | 10.8.1 | **also currently blocked**, discovered while fixing the lint pipeline post-Next.js-16: `eslint@10.8.1` crashes against the current `eslint-plugin-react@7.37.5` (latest published) and separately inside ESLint's own internals — both stem from removed ESLint 9+ APIs the plugin ecosystem hasn't fully caught up with yet |
 | Node.js (local) | v24.14.0 | v24.19.0 (LTS) | patch |
 | `node:20-alpine` (Dockerfile) | 20 | 26 published | major — deliberately behind; bump alongside `@types/node` above |

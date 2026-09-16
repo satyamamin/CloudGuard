@@ -121,6 +121,31 @@ For real Azure calls locally, set `AZURE_AUTH_MODE=cli` and `az login` first —
 
 Two non-obvious details in that wiring. **`stop-dev.ps1` reads `apps/api-byoc/.env.dev-azure`, not the live `.env`** — `set-mode.ps1` swaps `.env` *before* calling `stop-dev.ps1`, so by then `.env` describes the mode being switched *to*; reading it would mean switching azure→local never stops the server (exactly when you want it off) while local→azure stops the one it's about to start. And **`set-mode.ps1 -Mode azure` passes `-KeepDatabase`** to `stop-dev.ps1` for that same reason, avoiding a pointless stop/start cycle. Switching to `local` deliberately doesn't. Starting and stopping both need write access, which the otherwise read-only Service Principal in `dev-test/.env` gets from a **custom Azure role, `Postgres Flexible Server Start-Stop`** (definition id `33d177dc-470b-4a8e-a7bb-02db0d7233c8`), assigned to it at the scope of that **one server**, not the resource group. The role grants exactly three actions — `Microsoft.DBforPostgreSQL/flexibleServers/read`, `/start/action`, `/stop/action` — and deliberately no write or delete, so a leaked SP secret could not modify or destroy the server, and no `firewallRules/*` either (changing the firewall, e.g. when your office IP changes, still needs a personal `az login`). Contributor scoped to the server would also have worked and was rejected as too broad. Verified end to end under the SP: `az logout` → `ensure-az-login.ps1` → `test-dev.ps1` started the server with no personal login involved, and `stop-dev.ps1` stopped it again. If that assignment is ever removed the helpers degrade gracefully — they detect `AuthorizationFailed` and print an explicit "run `az login` as yourself" hint rather than failing obscurely.
 
+To **recreate** the role and assignment (a fresh subscription, or if either is deleted — the definition id above is only useful while the role still exists). Run these as an account holding `Microsoft.Authorization/*/write`; the SP cannot grant itself anything. Save as `pg-startstop-role.json`, substituting the subscription id:
+
+```json
+{
+  "Name": "Postgres Flexible Server Start-Stop",
+  "IsCustom": true,
+  "Description": "Start and stop PostgreSQL Flexible Servers, and read their state. Used by dev-test/azure-postgres.ps1 so the dev database can be stopped when idle without granting Contributor.",
+  "Actions": [
+    "Microsoft.DBforPostgreSQL/flexibleServers/read",
+    "Microsoft.DBforPostgreSQL/flexibleServers/start/action",
+    "Microsoft.DBforPostgreSQL/flexibleServers/stop/action"
+  ],
+  "NotActions": [], "DataActions": [], "NotDataActions": [],
+  "AssignableScopes": ["/subscriptions/<sub-id>/resourceGroups/rg-finops-lab-dev"]
+}
+```
+
+```
+az role definition create --role-definition @pg-startstop-role.json
+az ad sp show --id <AZURE_SP_APP_ID from dev-test/.env> --query id -o tsv    # -> SP object id
+az role assignment create --assignee-object-id <sp-object-id> --assignee-principal-type ServicePrincipal --role "/subscriptions/<sub-id>/providers/Microsoft.Authorization/roleDefinitions/<role-definition-guid>" --scope "/subscriptions/<sub-id>/resourceGroups/rg-finops-lab-dev/providers/Microsoft.DBforPostgreSQL/flexibleServers/<server-name>" --subscription <sub-id>
+```
+
+Two gotchas that cost a failed attempt the first time. **Pass `--role` as the full role-definition resource id, not the role name** — passing the name against a resource-level `--scope` fails with a misleading `MissingSubscription`, and `--subscription` must be given explicitly too. And **`--assignee-object-id` takes the SP's *object* id, not its app id** (`AZURE_SP_APP_ID` in `dev-test/.env` is the app id; the second command above converts it). Assignments take a minute or two to propagate, so retry once before concluding the grant didn't work.
+
 `apps/web`:
 
 ```

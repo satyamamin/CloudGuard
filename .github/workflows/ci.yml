@@ -1,0 +1,75 @@
+# Pre-merge verification. Separate from build-api-image.yml on purpose:
+# that workflow has `push: true` and publishes to GHCR, so it must never
+# run on an unreviewed pull request. This one builds the same image with
+# `push: false` and throws it away.
+#
+# Why this exists: there is no test framework anywhere in the repo, and
+# until this was added, nothing ran on a pull request except Vercel's
+# frontend preview build -- so a Dependabot PR touching apps/api-byoc
+# showed a green check while verifying nothing about the API at all.
+#
+# Deliberately does NOT run `npm run build -w apps/web`: Vercel already
+# builds apps/web on every PR, with the real Clerk/Bicep env vars that
+# this workflow does not have (and should not be given). Duplicating it
+# here would only add a failure mode. Linting is included because ESLint
+# needs no env vars.
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [ main ]
+
+jobs:
+  build-and-lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: ".nvmrc"
+          cache: "npm"
+
+      # `npm ci` requires package.json and package-lock.json to agree.
+      # Dependabot's per-workspace entries used to produce PRs that updated
+      # only a workspace package.json, which would fail here -- see the
+      # comment in .github/dependabot.yml for why there is now a single
+      # root-level npm entry.
+      - run: npm ci
+
+      - run: npm run build:shared
+
+      # apps/api-byoc/src/generated/prisma is gitignored (a build artifact),
+      # so it must be generated before `nest build` can type-check against
+      # it -- same order as apps/api-byoc/Dockerfile. DATABASE_URL is a
+      # throwaway: `generate` never connects, it only needs the value to
+      # resolve in prisma.config.ts.
+      - run: npx prisma generate --schema apps/api-byoc/prisma/schema.prisma
+        env:
+          DATABASE_URL: "postgresql://ci:ci@localhost:5432/ci"
+
+      - run: npm run build -w apps/api-byoc
+
+      - run: npm run lint -w apps/web
+
+  docker-build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: docker/setup-buildx-action@v4
+
+      # The check local dev structurally cannot do. The runtime stage copies
+      # only the ROOT node_modules, so if npm nests a real dependency under
+      # apps/api-byoc/node_modules instead of hoisting it, the image ships
+      # without it and crashes at boot -- while `npm run build` and
+      # `nest start --watch` both pass locally. That has happened twice
+      # (@nestjs/platform-express, then @azure/arm-subscriptions).
+      - uses: docker/build-push-action@v7
+        with:
+          context: .
+          file: apps/api-byoc/Dockerfile
+          push: false
+          cache-from: type=gha
+          cache-to: type=gha,mode=max

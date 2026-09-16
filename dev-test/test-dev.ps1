@@ -49,6 +49,11 @@ Write-Host "`n== Step 2: Docker / Postgres ==" -ForegroundColor Cyan
 $usingLocalDb = $apiEnv["DATABASE_URL"] -match "localhost"
 if (-not $usingLocalDb) {
     Write-Host "DATABASE_URL doesn't point at localhost — skipping local Postgres container."
+    # "azure" mode: the Flexible Server is stopped by stop-dev.ps1 to save
+    # compute, and has no auto-resume of its own, so bring it back up here.
+    # See dev-test/azure-postgres.ps1 for why this is manual.
+    . (Join-Path $PSScriptRoot "azure-postgres.ps1")
+    Start-AzurePostgresIfStopped $apiEnv["DATABASE_URL"]
 } else {
     docker info -f "{{.ServerVersion}}" *> $null
     if ($LASTEXITCODE -ne 0) {

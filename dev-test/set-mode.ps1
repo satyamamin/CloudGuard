@@ -69,7 +69,16 @@ if ($NoRestart) {
 
 if ($apiRunning -or $webRunning) {
     Write-Host "`napps/api-byoc or apps/web is still running under the old mode -- restarting..." -ForegroundColor Yellow
-    & (Join-Path $PSScriptRoot "stop-dev.ps1")
+    # -KeepDatabase when switching INTO azure mode: stop-dev.ps1 would
+    # otherwise stop the Flexible Server that test-dev.ps1 is about to start
+    # again, costing a pointless stop/start cycle of ~2-3 minutes. Switching to
+    # local mode deliberately does NOT pass it -- that's when the server should
+    # go down and stop billing compute.
+    if ($Mode -eq "azure") {
+        & (Join-Path $PSScriptRoot "stop-dev.ps1") -KeepDatabase
+    } else {
+        & (Join-Path $PSScriptRoot "stop-dev.ps1")
+    }
     Write-Host ""
     & (Join-Path $PSScriptRoot "test-dev.ps1")
 } else {

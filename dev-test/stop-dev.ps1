@@ -5,6 +5,13 @@
 # so anything already running needs killing before it'll pick up the new
 # value on the next test-dev.ps1 run.
 
+param(
+    # Skips stopping the Azure Postgres Flexible Server. set-mode.ps1 passes
+    # this when switching INTO azure mode, where it calls stop-dev.ps1 only to
+    # kill the old processes and is about to need the database up again.
+    [switch]$KeepDatabase
+)
+
 $ErrorActionPreference = "Stop"
 $repoRoot = Split-Path $PSScriptRoot -Parent
 
@@ -51,6 +58,33 @@ Write-Host "`n== Stopping Prisma Studio =="
 Stop-Port 5555 "Prisma Studio"
 
 Write-Host "`n== Stopping local Postgres container =="
-docker compose -f (Join-Path $repoRoot "docker-compose.dev.yml") stop postgres
+# Gated on Docker actually running -- in azure mode there's no local container
+# to stop, and an unguarded `docker compose` here would spin up / error out of
+# Docker Desktop for nothing.
+docker info -f "{{.ServerVersion}}" *> $null
+if ($LASTEXITCODE -eq 0) {
+    docker compose -f (Join-Path $repoRoot "docker-compose.dev.yml") stop postgres
+} else {
+    Write-Host "Docker isn't running -- no local Postgres container to stop."
+}
+
+Write-Host "`n== Stopping Azure Postgres =="
+if ($KeepDatabase) {
+    Write-Host "-KeepDatabase passed -- leaving the Flexible Server running."
+} else {
+    # Deliberately read .env.dev-azure, NOT the live .env. set-mode.ps1 swaps
+    # .env BEFORE calling this script, so by the time we run, .env already
+    # describes the mode being switched TO. Reading it would mean that
+    # switching azure -> local never stops the server (the exact case where
+    # you want it off), while local -> azure would stop the server it is about
+    # to start. .env.dev-azure names the one Azure dev server either way.
+    . (Join-Path $PSScriptRoot "azure-postgres.ps1")
+    $azureEnv = Read-DotEnv (Join-Path $repoRoot "apps\api-byoc\.env.dev-azure")
+    if ($azureEnv["DATABASE_URL"]) {
+        Stop-AzurePostgresIfRunning $azureEnv["DATABASE_URL"]
+    } else {
+        Write-Host "No DATABASE_URL in apps/api-byoc/.env.dev-azure -- nothing to stop."
+    }
+}
 
 Write-Host "`nAll stopped. Switch modes with .\dev-test\set-mode.ps1 -Mode local|azure (or edit apps/api-byoc/.env / apps/web/.env.local directly for a one-off change), then re-run test-dev.ps1." -ForegroundColor Green

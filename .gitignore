@@ -48,3 +48,9 @@ __pycache__/
 # OS
 Thumbs.db
 .DS_Store
+
+# Claude Code local (machine-specific) settings
+.claude/settings.local.json
+
+.vercel
+.env*.local

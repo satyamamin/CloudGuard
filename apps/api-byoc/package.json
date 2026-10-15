@@ -9,7 +9,9 @@
     "prisma:generate": "prisma generate",
     "prisma:migrate:dev": "prisma migrate dev",
     "prisma:migrate:deploy": "prisma migrate deploy",
-    "smoke-test": "node scripts/smoke-test.mjs"
+    "smoke-test": "node scripts/smoke-test.mjs",
+    "test": "jest --config jest.config.js",
+    "test:cov": "jest --config jest.config.js --coverage"
   },
   "dependencies": {
     "@azure/arm-costmanagement": "^1.0.0",
@@ -31,11 +33,17 @@
   },
   "devDependencies": {
     "@nestjs/cli": "^11.0.24",
+    "@nestjs/testing": "^11.2.7",
+    "@swc/jest": "^0.2.39",
     "@types/express": "^5.0.6",
+    "@types/jest": "^30.0.0",
     "@types/node": "^20.14.15",
     "@types/pg": "^8.23.1",
+    "@types/supertest": "^7.2.1",
     "dotenv": "^17.4.2",
+    "jest": "^30.5.2",
     "prisma": "^7.10.0",
+    "supertest": "^7.3.1",
     "typescript": "^6.0.3"
   }
 }

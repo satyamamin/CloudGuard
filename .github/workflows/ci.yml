@@ -1,26 +1,57 @@
-# Pre-merge verification. Separate from build-api-image.yml on purpose:
-# that workflow has `push: true` and publishes to GHCR, so it must never
-# run on an unreviewed pull request. This one builds the same image with
-# `push: false` and throws it away.
+# Pré-merge : tests, build, lint, build Docker, cohérence Bicep, audit.
+# Séparé de build-api-image.yml exprès : ce dernier publie sur GHCR (push: true)
+# et ne doit jamais tourner sur une PR non relue. Ici, rien n'est publié.
 #
-# Why this exists: there is no test framework anywhere in the repo, and
-# until this was added, nothing ran on a pull request except Vercel's
-# frontend preview build -- so a Dependabot PR touching apps/api-byoc
-# showed a green check while verifying nothing about the API at all.
-#
-# Deliberately does NOT run `npm run build -w apps/web`: Vercel already
-# builds apps/web on every PR, with the real Clerk/Bicep env vars that
-# this workflow does not have (and should not be given). Duplicating it
-# here would only add a failure mode. Linting is included because ESLint
-# needs no env vars.
+# Ce workflow est aussi réutilisable (workflow_call) : build-api-image.yml
+# l'appelle avant de publier, pour qu'une image ne soit jamais poussée si les
+# tests échouent. Il n'a donc plus de déclencheur `push: main` propre — le
+# push sur main passe par build-api-image.yml, ce qui évite de tout exécuter
+# deux fois.
 name: CI
 
 on:
   pull_request:
-  push:
-    branches: [ main ]
+  workflow_call:
+
+permissions:
+  contents: read
+
+# Annule l'exécution précédente d'une même PR quand on repousse un commit.
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
+  # Rapide (~1 min) : ne nécessite ni `prisma generate` ni le build de
+  # packages/shared (jest mappe @finops-lab/shared sur ses sources, la base
+  # et le SDK Azure sont mockés).
+  tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: ".nvmrc"
+          cache: "npm"
+
+      - run: npm ci
+
+      - name: Tests packages/shared (Vitest)
+        working-directory: packages/shared
+        run: npx vitest run --config vitest.config.mts
+
+      - name: Tests apps/api-byoc (Jest + couverture)
+        run: npm run test:cov -w apps/api-byoc
+
+      - name: Publier le rapport de couverture
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-api-byoc
+          path: apps/api-byoc/coverage
+          if-no-files-found: ignore
+
   build-and-lint:
     runs-on: ubuntu-latest
     steps:
@@ -31,20 +62,15 @@ jobs:
           node-version-file: ".nvmrc"
           cache: "npm"
 
-      # `npm ci` requires package.json and package-lock.json to agree.
-      # Dependabot's per-workspace entries used to produce PRs that updated
-      # only a workspace package.json, which would fail here -- see the
-      # comment in .github/dependabot.yml for why there is now a single
-      # root-level npm entry.
+      # `npm ci` exige que package.json et package-lock.json concordent
+      # (voir .github/dependabot.yml : une seule entrée npm à la racine).
       - run: npm ci
 
       - run: npm run build:shared
 
-      # apps/api-byoc/src/generated/prisma is gitignored (a build artifact),
-      # so it must be generated before `nest build` can type-check against
-      # it -- same order as apps/api-byoc/Dockerfile. DATABASE_URL is a
-      # throwaway: `generate` never connects, it only needs the value to
-      # resolve in prisma.config.ts.
+      # apps/api-byoc/src/generated/prisma est gitignoré (artefact de build) :
+      # il faut le générer avant `nest build` — même ordre que le Dockerfile.
+      # DATABASE_URL est factice : `generate` ne se connecte jamais.
       - run: npx prisma generate --schema apps/api-byoc/prisma/schema.prisma
         env:
           DATABASE_URL: "postgresql://ci:ci@localhost:5432/ci"
@@ -60,12 +86,10 @@ jobs:
 
       - uses: docker/setup-buildx-action@v4
 
-      # The check local dev structurally cannot do. The runtime stage copies
-      # only the ROOT node_modules, so if npm nests a real dependency under
-      # apps/api-byoc/node_modules instead of hoisting it, the image ships
-      # without it and crashes at boot -- while `npm run build` and
-      # `nest start --watch` both pass locally. That has happened twice
-      # (@nestjs/platform-express, then @azure/arm-subscriptions).
+      # Le contrôle que le dev local ne peut structurellement pas faire :
+      # l'étage runtime ne copie que le node_modules RACINE ; si npm imbrique
+      # une vraie dépendance sous apps/api-byoc/node_modules, l'image part
+      # sans elle et plante au boot, alors que `npm run build` passe.
       - uses: docker/build-push-action@v7
         with:
           context: .
@@ -73,3 +97,42 @@ jobs:
           push: false
           cache-from: type=gha
           cache-to: type=gha,mode=max
+
+  # infra/bicep/main.json est versionné (c'est lui que le bouton « Deploy to
+  # Azure » consomme). Ce job échoue s'il dérive de main.bicep.
+  # Les blocs `_generator` (version/hash du compilateur Bicep, présents à la
+  # racine ET dans chaque module imbriqué) sont ignorés : ils changent à
+  # chaque mise à jour de Bicep sans que le modèle change.
+  bicep-in-sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Compiler main.bicep
+        run: az bicep build --file infra/bicep/main.bicep --outfile "$RUNNER_TEMP/main.json"
+
+      - name: Vérifier que infra/bicep/main.json est à jour
+        run: |
+          strip='walk(if type=="object" then del(._generator) else . end)'
+          if ! diff <(jq -S "$strip" "$RUNNER_TEMP/main.json") <(jq -S "$strip" infra/bicep/main.json); then
+            echo "::error file=infra/bicep/main.json::main.json n'est pas synchronisé avec main.bicep. Régénérer : az bicep build --file infra/bicep/main.bicep --outfile infra/bicep/main.json"
+            exit 1
+          fi
+
+  # Informatif au départ (continue-on-error) : à rendre bloquant une fois les
+  # alertes existantes traitées (retirer la ligne continue-on-error).
+  audit:
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: ".nvmrc"
+          cache: "npm"
+
+      - run: npm ci
+
+      - name: Audit des dépendances de production
+        run: npm audit --workspaces --include-workspace-root --omit=dev --audit-level=high || true

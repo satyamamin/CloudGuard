@@ -1,7 +1,7 @@
 # Multi-stage build for the Container App image deployed into the
 # customer's own Azure tenant (see infra/bicep and docs/connect-azure.md).
 
-FROM node:20-alpine AS builder
+FROM node:22-alpine AS builder
 WORKDIR /repo
 
 # Alpine ships no OpenSSL by default. Without it, `prisma generate` can't
@@ -15,7 +15,7 @@ RUN apk add --no-cache openssl
 COPY package.json package-lock.json* ./
 COPY packages/shared/package.json packages/shared/package.json
 COPY apps/api-byoc/package.json apps/api-byoc/package.json
-RUN npm install --workspaces --include-workspace-root
+RUN npm ci --workspaces --include-workspace-root
 
 COPY tsconfig.base.json ./
 COPY packages/shared packages/shared
@@ -25,7 +25,7 @@ RUN npm run build -w packages/shared
 RUN npx prisma generate --schema apps/api-byoc/prisma/schema.prisma
 RUN npm run build -w apps/api-byoc
 
-FROM node:20-alpine AS runtime
+FROM node:22-alpine AS runtime
 WORKDIR /app
 ENV NODE_ENV=production
 
